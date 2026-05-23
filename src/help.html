@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#3b6e8f">
+  <title>使い方 — シコログ</title>
+  <meta name="description" content="シコログの使い方ガイド。記録の取り方、メモの付け方、PINロック、端末間引き継ぎ、CSV書き出しなど。">
+  <link rel="icon" type="image/svg+xml" href="icon.svg">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="page">
+    <header class="page__header">
+      <h1 class="page__title">使い方</h1>
+    </header>
+
+    <section class="page__section">
+      <h2>基本：記録する</h2>
+      <ol>
+        <li>初回起動時に <strong>4桁のPIN</strong> を設定します（あとで設定からOFFにもできます）</li>
+        <li>ホーム画面の大きな「＋1」ボタンを <strong>タップ</strong></li>
+        <li>「誰で／何で」を入力 → 「保存」（スキップで未入力のまま記録もOK）</li>
+        <li><strong>長押し（0.5秒）</strong> で、モーダルを開かずにメモなしで即記録もできます</li>
+      </ol>
+    </section>
+
+    <section class="page__section">
+      <h2>履歴を編集・削除</h2>
+      <ol>
+        <li>下タブ「履歴」を開く</li>
+        <li>編集したい記録を <strong>タップ</strong></li>
+        <li>内容を直して「保存」、または「削除」（確認ダイアログあり）</li>
+      </ol>
+    </section>
+
+    <section class="page__section">
+      <h2>統計を見る</h2>
+      <p>
+        下タブ「統計」で、今月／今週／今日／通算の合計と、月別／曜日別／時間帯別の傾向グラフ、
+        「誰で／何で」のランキングが見られます。
+      </p>
+    </section>
+
+    <section class="page__section">
+      <h2>PINを忘れたとき</h2>
+      <p>
+        データは端末ローカルに暗号化保存されているため、PINを忘れた場合、運営者側からの復旧はできません。
+        どうしても解除したい場合は、ブラウザのサイトデータをクリアすると初期状態に戻りますが、
+        これまでの記録もすべて消えます。<strong>大事な記録は事前にCSV／JSON書き出しでバックアップ</strong>しておくことを推奨します。
+      </p>
+    </section>
+
+    <section class="page__section">
+      <h2>生体認証（指紋・顔）でロック解除</h2>
+      <ol>
+        <li>下タブ「設定」を開く</li>
+        <li>「生体認証を有効化」をタップ → 端末の生体認証ダイアログで登録</li>
+        <li>以後、起動時に自動で指紋・顔認証ダイアログが出る（失敗時はPIN入力にフォールバック）</li>
+      </ol>
+      <p>※ ご利用の端末・ブラウザが生体認証に対応している必要があります。</p>
+    </section>
+
+    <section class="page__section">
+      <h2>別の端末にデータを引き継ぐ</h2>
+      <p>2つの方法があります。</p>
+      <h3>方法1：引き継ぎコード（ふっかつのじゅもん）</h3>
+      <ol>
+        <li>元端末で「設定 → 引き継ぎコードを作る」 → コピー</li>
+        <li>LINEで自分宛に送る／メモアプリに貼る／AirDrop などで新端末へ運ぶ</li>
+        <li>新端末で「設定 → 引き継ぎコードを取り込む」 → 貼り付け → 取り込む</li>
+      </ol>
+      <h3>方法2：JSONファイル</h3>
+      <ol>
+        <li>元端末で「設定 → JSONで書き出し」 → ダウンロードしたファイルを新端末に運ぶ</li>
+        <li>新端末で「設定 → JSONから読み込み」 → ファイルを選択</li>
+      </ol>
+      <p>どちらの方法も既存データとマージされます（同じIDは上書き、新しいIDは追加）。</p>
+    </section>
+
+    <section class="page__section">
+      <h2>ホーム画面に追加（PWA）</h2>
+      <p><strong>iPhone（Safari）</strong>：画面下の共有ボタン → 「ホーム画面に追加」</p>
+      <p><strong>Android（Chrome）</strong>：右上のメニュー → 「ホーム画面に追加」または「アプリをインストール」</p>
+    </section>
+
+    <section class="page__section">
+      <h2>データを完全に消したい</h2>
+      <p>「設定 → 全データを削除」で、記録もPIN設定も生体認証情報もすべて消去できます。取り消せません。</p>
+    </section>
+
+    <footer class="page__footer">
+      <p><a href="index.html">← アプリに戻る</a></p>
+      <nav class="page__nav">
+        <a href="privacy.html">プライバシーポリシー</a>
+        <a href="terms.html">利用規約</a>
+        <a href="about.html">運営者情報</a>
+      </nav>
+    </footer>
+  </main>
+</body>
+</html>

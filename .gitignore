@@ -1,0 +1,34 @@
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*~
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Env / secrets
+.env
+.env.*
+*.local
+
+# Vercel
+.vercel/
+
+# Claude Code local config
+.claude/
+
+# ローカル専用メモ（公開しない）
+CLAUDE.md
+
+# Build outputs
+dist/
+build/

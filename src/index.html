@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#3b6e8f">
+  <meta name="referrer" content="no-referrer">
+  <title>シコログ — 回数を記録するプライベートカウンター</title>
+  <meta name="description" content="シコログは、回数を「いつ・誰で・何で」と一緒に記録できるプライベートなカウンターアプリ。データは端末のブラウザだけに保存され、外部送信は一切しません。スマホのホーム画面にも置けます。">
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="シコログ — 回数を記録するプライベートカウンター">
+  <meta property="og:description" content="回数を「いつ・誰で・何で」と一緒に記録できるプライベートなカウンターアプリ。端末完結・外部送信ゼロ。">
+  <meta property="og:image" content="icon.svg">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="シコログ — 回数を記録するプライベートカウンター">
+  <meta name="twitter:description" content="回数を「いつ・誰で・何で」と一緒に記録できるプライベートなカウンターアプリ。端末完結・外部送信ゼロ。">
+
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/svg+xml" href="icon.svg">
+  <link rel="apple-touch-icon" href="icon.svg">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="シコログ">
+
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- ロック画面（PIN設定 or 入力） -->
+  <div id="lock-screen" class="lock" aria-hidden="true">
+    <div class="lock__panel">
+      <h1 id="lock-title" class="lock__title">ロックを解除</h1>
+      <p id="lock-message" class="lock__message">PINを入力してください</p>
+      <div id="pin-display" class="pin-display" aria-label="PIN入力">
+        <span class="pin-dot"></span>
+        <span class="pin-dot"></span>
+        <span class="pin-dot"></span>
+        <span class="pin-dot"></span>
+      </div>
+      <p id="lock-error" class="lock__error" aria-live="polite"></p>
+      <button id="btn-biometric-unlock" class="lock__biometric" type="button" hidden>
+        <span aria-hidden="true">🔓</span>
+        <span>指紋・顔認証で解除</span>
+      </button>
+      <div id="pin-keypad" class="pin-keypad">
+        <button class="pin-key" data-key="1" type="button">1</button>
+        <button class="pin-key" data-key="2" type="button">2</button>
+        <button class="pin-key" data-key="3" type="button">3</button>
+        <button class="pin-key" data-key="4" type="button">4</button>
+        <button class="pin-key" data-key="5" type="button">5</button>
+        <button class="pin-key" data-key="6" type="button">6</button>
+        <button class="pin-key" data-key="7" type="button">7</button>
+        <button class="pin-key" data-key="8" type="button">8</button>
+        <button class="pin-key" data-key="9" type="button">9</button>
+        <button class="pin-key pin-key--blank" type="button" disabled></button>
+        <button class="pin-key" data-key="0" type="button">0</button>
+        <button class="pin-key pin-key--del" data-key="del" type="button" aria-label="1文字削除">⌫</button>
+      </div>
+    </div>
+  </div>
+
+  <main id="app" class="app" aria-hidden="true">
+
+    <!-- ① ホーム画面 -->
+    <section id="screen-home" class="screen screen--active">
+      <div class="home-center">
+        <button id="btn-plus" class="btn-plus" type="button" aria-label="+1 記録する">
+          <span class="btn-plus__label">＋1</span>
+        </button>
+        <p class="home-hint">タップでメモを入れて記録／長押しでメモなし即記録</p>
+        <div class="home-stats">
+          <div class="home-stat">
+            <span class="home-stat__label">今日</span>
+            <span id="home-today-count" class="home-stat__count">0</span>
+            <span class="home-stat__unit">回</span>
+          </div>
+          <div class="home-stat">
+            <span class="home-stat__label">今月</span>
+            <span id="home-monthly-count" class="home-stat__count">0</span>
+            <span class="home-stat__unit">回</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ② 履歴画面 -->
+    <section id="screen-history" class="screen">
+      <header class="screen-header">
+        <h1 class="screen-title">履歴</h1>
+        <p class="screen-hint">タップで編集・削除</p>
+      </header>
+      <ul id="history-list" class="history-list"></ul>
+      <p id="history-empty" class="history-empty">まだ記録がありません。</p>
+    </section>
+
+    <!-- ③ 統計画面 -->
+    <section id="screen-stats" class="screen">
+      <header class="screen-header">
+        <h1 class="screen-title">統計</h1>
+      </header>
+
+      <div class="stats-cards">
+        <div class="stats-card">
+          <div class="stats-card__label">今月</div>
+          <div class="stats-card__value"><span id="stats-month-count">0</span><span class="stats-card__unit">回</span></div>
+        </div>
+        <div class="stats-card">
+          <div class="stats-card__label">今週</div>
+          <div class="stats-card__value"><span id="stats-week-count">0</span><span class="stats-card__unit">回</span></div>
+        </div>
+        <div class="stats-card">
+          <div class="stats-card__label">今日</div>
+          <div class="stats-card__value"><span id="stats-today-count">0</span><span class="stats-card__unit">回</span></div>
+        </div>
+        <div class="stats-card">
+          <div class="stats-card__label">通算</div>
+          <div class="stats-card__value"><span id="stats-total-count">0</span><span class="stats-card__unit">回</span></div>
+        </div>
+      </div>
+
+      <div class="stats-section">
+        <h2 class="stats-section__title">月別の推移（直近6か月）</h2>
+        <div id="stats-month-chart" class="bar-chart"></div>
+      </div>
+
+      <div class="stats-section">
+        <h2 class="stats-section__title">曜日の傾向</h2>
+        <div id="stats-weekday-chart" class="bar-chart bar-chart--small"></div>
+      </div>
+
+      <div class="stats-section">
+        <h2 class="stats-section__title">時間帯の傾向</h2>
+        <div id="stats-hour-chart" class="bar-chart bar-chart--small"></div>
+      </div>
+
+      <div class="stats-section">
+        <h2 class="stats-section__title">「誰で」ランキング</h2>
+        <ol id="stats-who-ranking" class="ranking"></ol>
+      </div>
+
+      <div class="stats-section">
+        <h2 class="stats-section__title">「何で」ランキング</h2>
+        <ol id="stats-how-ranking" class="ranking"></ol>
+      </div>
+
+      <!-- FANZA連携セクション（公式サイトのコンテンツへのリンク） -->
+      <div class="stats-section">
+        <h2 class="stats-section__title">FANZAから</h2>
+        <p class="fanza-note">FANZA公式の人気・新着動画をチェック（外部サイトに移動します）</p>
+        <div class="fanza-grid">
+          <a id="link-fanza-ranking" class="fanza-card" href="#" target="_blank" rel="noopener noreferrer">
+            <span class="fanza-card__icon" aria-hidden="true">🏆</span>
+            <span class="fanza-card__label">人気ランキング</span>
+          </a>
+          <a id="link-fanza-new" class="fanza-card" href="#" target="_blank" rel="noopener noreferrer">
+            <span class="fanza-card__icon" aria-hidden="true">✨</span>
+            <span class="fanza-card__label">新着動画</span>
+          </a>
+          <a id="link-fanza-actress" class="fanza-card" href="#" target="_blank" rel="noopener noreferrer">
+            <span class="fanza-card__icon" aria-hidden="true">👤</span>
+            <span class="fanza-card__label">女優一覧</span>
+          </a>
+          <a id="link-fanza-genre" class="fanza-card" href="#" target="_blank" rel="noopener noreferrer">
+            <span class="fanza-card__icon" aria-hidden="true">📂</span>
+            <span class="fanza-card__label">ジャンル別</span>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ④ 設定画面 -->
+    <section id="screen-settings" class="screen">
+      <header class="screen-header">
+        <h1 class="screen-title">設定</h1>
+      </header>
+
+      <div class="settings-group">
+        <h2 class="settings-group__title">データ管理</h2>
+        <button id="btn-export-csv" class="settings-item" type="button">
+          <span class="settings-item__label">CSVで書き出し</span>
+          <span class="settings-item__hint">バックアップ用</span>
+        </button>
+        <button id="btn-delete-all" class="settings-item settings-item--danger" type="button">
+          <span class="settings-item__label">全データを削除</span>
+          <span class="settings-item__hint">取り消せません</span>
+        </button>
+      </div>
+
+      <div class="settings-group">
+        <h2 class="settings-group__title">端末間同期</h2>
+        <button id="btn-create-spell" class="settings-item" type="button">
+          <span class="settings-item__label">引き継ぎコードを作る</span>
+          <span class="settings-item__hint">ふっかつのじゅもん方式。文字列をコピペで別端末へ</span>
+        </button>
+        <button id="btn-restore-spell" class="settings-item" type="button">
+          <span class="settings-item__label">引き継ぎコードを取り込む</span>
+          <span class="settings-item__hint">別端末で作ったコードを貼り付け</span>
+        </button>
+        <button id="btn-export-json" class="settings-item" type="button">
+          <span class="settings-item__label">JSONファイルで書き出し</span>
+          <span class="settings-item__hint">大量データ向け（バックアップにも）</span>
+        </button>
+        <button id="btn-import-json" class="settings-item" type="button">
+          <span class="settings-item__label">JSONファイルから読み込み</span>
+          <span class="settings-item__hint">別端末のJSONを取り込む</span>
+        </button>
+        <input id="file-import-json" type="file" accept="application/json,.json" hidden>
+      </div>
+
+      <div class="settings-group">
+        <h2 class="settings-group__title">セキュリティ</h2>
+        <button id="btn-change-pin" class="settings-item" type="button">
+          <span class="settings-item__label">PINを変更</span>
+        </button>
+        <button id="btn-toggle-biometric" class="settings-item" type="button">
+          <span id="biometric-label" class="settings-item__label">生体認証を有効化</span>
+          <span id="biometric-hint" class="settings-item__hint">指紋・顔認証で素早く解除</span>
+        </button>
+        <button id="btn-toggle-lock" class="settings-item" type="button">
+          <span id="lock-toggle-label" class="settings-item__label">ロックを無効化</span>
+          <span id="lock-toggle-hint" class="settings-item__hint">起動時のPIN/生体認証をスキップ</span>
+        </button>
+      </div>
+
+      <div class="settings-group">
+        <h2 class="settings-group__title">外観</h2>
+        <div class="theme-selector">
+          <button class="theme-option" data-theme="system" type="button">
+            <span class="theme-option__label">端末に合わせる</span>
+          </button>
+          <button class="theme-option" data-theme="light" type="button">
+            <span class="theme-option__label">ライト</span>
+          </button>
+          <button class="theme-option" data-theme="dark" type="button">
+            <span class="theme-option__label">ダーク</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="settings-group">
+        <h2 class="settings-group__title">このアプリ</h2>
+        <p class="settings-note">
+          データはこの端末のブラウザのみに保存されます。<br>
+          外部送信・クラウド同期は行いません。
+        </p>
+        <nav class="settings-links">
+          <a href="help.html">使い方</a>
+          <a href="privacy.html">プライバシーポリシー</a>
+          <a href="terms.html">利用規約</a>
+          <a href="about.html">運営者情報</a>
+        </nav>
+      </div>
+    </section>
+
+    <!-- 下タブ -->
+    <nav class="tabbar" aria-label="画面切替">
+      <button class="tab tab--active" data-tab="home" type="button">
+        <span class="tab__label">ホーム</span>
+      </button>
+      <button class="tab" data-tab="history" type="button">
+        <span class="tab__label">履歴</span>
+      </button>
+      <button class="tab" data-tab="stats" type="button">
+        <span class="tab__label">統計</span>
+      </button>
+      <button class="tab" data-tab="settings" type="button">
+        <span class="tab__label">設定</span>
+      </button>
+    </nav>
+  </main>
+
+  <!-- 入力／編集モーダル -->
+  <div id="modal" class="modal" aria-hidden="true">
+    <div class="modal__backdrop" data-action="cancel"></div>
+    <div class="modal__panel" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <header class="modal__header">
+        <h2 id="modal-title" class="modal__title">記録する</h2>
+        <button class="modal__close" data-action="cancel" type="button" aria-label="閉じる">×</button>
+      </header>
+
+      <div class="modal__body">
+        <p id="modal-datetime" class="modal__datetime"></p>
+        <div class="field">
+          <label class="field__label" for="input-who">誰で？</label>
+          <div class="field__row">
+            <input id="input-who" class="field__input" type="text" autocomplete="off" placeholder="（空欄でもOK）">
+            <button id="btn-search-who-fanza" class="btn-fanza-search" type="button" aria-label="この名前でFANZA検索">
+              <span class="btn-fanza-search__icon" aria-hidden="true">🔎</span>
+              <span class="btn-fanza-search__label">FANZA</span>
+            </button>
+          </div>
+          <div id="who-suggestions" class="chips chips--small"></div>
+        </div>
+
+        <div class="field">
+          <span class="field__label">何で？</span>
+          <div id="how-presets" class="chips">
+            <button class="chip" data-preset="インスタ" type="button">インスタ</button>
+            <button class="chip" data-preset="動画" type="button">動画</button>
+            <button class="chip" data-preset="グラビア" type="button">グラビア</button>
+            <button class="chip" data-preset="漫画" type="button">漫画</button>
+            <button class="chip" data-preset="その他" type="button">その他</button>
+          </div>
+          <div class="field__row">
+            <input id="input-how" class="field__input" type="text" autocomplete="off" placeholder="自由入力もOK">
+            <button id="btn-search-how-fanza" class="btn-fanza-search" type="button" aria-label="この語でFANZA検索">
+              <span class="btn-fanza-search__icon" aria-hidden="true">🔎</span>
+              <span class="btn-fanza-search__label">FANZA</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <footer class="modal__footer">
+        <button id="btn-delete" class="btn btn--danger" type="button" hidden>削除</button>
+        <button id="btn-skip" class="btn btn--ghost" type="button">スキップ</button>
+        <button id="btn-save" class="btn btn--primary" type="button">保存</button>
+      </footer>
+    </div>
+  </div>
+
+  <!-- 引き継ぎコード：書き出し -->
+  <div id="spell-export" class="modal" aria-hidden="true">
+    <div class="modal__backdrop" data-action="cancel"></div>
+    <div class="modal__panel" role="dialog" aria-modal="true" aria-labelledby="spell-export-title">
+      <header class="modal__header">
+        <h2 id="spell-export-title" class="modal__title">引き継ぎコード（ふっかつのじゅもん）</h2>
+        <button class="modal__close" data-action="cancel" type="button" aria-label="閉じる">×</button>
+      </header>
+      <div class="modal__body">
+        <p class="modal__hint">この文字列を別端末で取り込むとデータを引き継げます。<br>
+          LINEで自分宛に送る／メモアプリに貼る／AirDropで送る、などで運んでください。</p>
+        <textarea id="spell-export-text" class="spell-text" readonly rows="8"></textarea>
+        <p id="spell-export-info" class="modal__hint"></p>
+      </div>
+      <footer class="modal__footer">
+        <button id="btn-spell-copy" class="btn btn--primary" type="button">コードをコピー</button>
+      </footer>
+    </div>
+  </div>
+
+  <!-- 引き継ぎコード：読み込み -->
+  <div id="spell-import" class="modal" aria-hidden="true">
+    <div class="modal__backdrop" data-action="cancel"></div>
+    <div class="modal__panel" role="dialog" aria-modal="true" aria-labelledby="spell-import-title">
+      <header class="modal__header">
+        <h2 id="spell-import-title" class="modal__title">引き継ぎコードを取り込む</h2>
+        <button class="modal__close" data-action="cancel" type="button" aria-label="閉じる">×</button>
+      </header>
+      <div class="modal__body">
+        <p class="modal__hint">別端末で作った引き継ぎコードを貼り付けてください。<br>
+          既存データとマージされます（同じIDは上書き）。</p>
+        <textarea id="spell-import-text" class="spell-text" rows="8" placeholder="ここに引き継ぎコードを貼り付け"></textarea>
+      </div>
+      <footer class="modal__footer">
+        <button id="btn-spell-paste" class="btn btn--ghost" type="button">貼り付け</button>
+        <button id="btn-spell-restore" class="btn btn--primary" type="button">取り込む</button>
+      </footer>
+    </div>
+  </div>
+
+  <!-- 確認ダイアログ -->
+  <div id="confirm" class="modal" aria-hidden="true">
+    <div class="modal__backdrop" data-action="cancel"></div>
+    <div class="modal__panel modal__panel--small" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+      <header class="modal__header">
+        <h2 id="confirm-title" class="modal__title">確認</h2>
+      </header>
+      <div class="modal__body">
+        <p id="confirm-message" class="confirm__message"></p>
+      </div>
+      <footer class="modal__footer">
+        <button id="confirm-cancel" class="btn btn--ghost" type="button">キャンセル</button>
+        <button id="confirm-ok" class="btn btn--danger" type="button">OK</button>
+      </footer>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
