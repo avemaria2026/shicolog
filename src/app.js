@@ -128,12 +128,14 @@
 
   function openFanzaSearch(query) {
     const url = makeFanzaSearchUrl(query);
-    // 新しいタブで開く。referrerは送らない（プライバシー配慮）
-    const win = window.open(url, '_blank', 'noopener,noreferrer');
-    if (!win) {
-      // ポップアップブロックされた場合のフォールバック：同タブで遷移
-      location.href = url;
-    }
+    // noopener 指定の window.open は成功時も null を返す仕様のため、
+    // <a target="_blank"> をプログラムでクリックする方式にする。
+    // この方式ならポップアップブロックされにくく、元タブも遷移しない。
+    const a = document.createElement('a');
+    a.href = url;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    a.click();
   }
 
   // ===== テーマ =====
