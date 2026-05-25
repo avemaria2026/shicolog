@@ -797,12 +797,12 @@
     const who = (record.who || '').trim();
     const how = (record.how || '').trim();
 
-    // 文面の組み立て
+    // 文面の組み立て（女優名には敬意を込めて「さん」付け）
     let text;
     if (who && how) {
-      text = `${who}の${how}で賢者になりました`;
+      text = `${who}さんの${how}で賢者になりました`;
     } else if (who) {
-      text = `${who}で賢者になりました`;
+      text = `${who}さんで賢者になりました`;
     } else if (how) {
       text = `${how}で賢者になりました`;
     } else {
