@@ -162,6 +162,26 @@
   const PENDING_WHO_KEY = 'shicolog:pending-who:v1';
   const PENDING_WHO_TTL_MS = 3 * 60 * 60 * 1000;
 
+  // 🎲 ランダム候補用：内蔵の人気女優リスト
+  // ※ FANZAのactressesページからCORS制約で動的取得できないため、定期的に手動で更新する想定
+  // ※ 新人が出てきたらここに追記すればOK（順不同）
+  const BUNDLED_ACTRESSES = [
+    '三上悠亜', '橋本ありな', '桜空もも', '河北彩花', '楓カレン',
+    '二宮ひかり', '通野未帆', '八掛うみ', 'JULIA', '天使もえ',
+    '美谷朱里', '麻里梨夏', '高橋しょう子', '北野のぞみ', '河南実里',
+    '涼森れむ', '戸田真琴', '川北メイサ', '葵', '明里つむぎ',
+    '七沢みあ', '弥生みづき', 'かなで自由', '楪カレン', '河合あすな',
+    '神宮寺ナオ', '篠田ゆう', '桃乃木かな', '月乃ルナ', '神木麗',
+    '佐倉ねね', '由愛可奈', '緒方咲', '美波もも', '深田えいみ',
+    '架乃ゆら', '吉高寧々', '阿部乃みく', '推川ゆうり', '古川いおり',
+  ];
+
+  function getRandomActress(excludeName = '') {
+    const pool = BUNDLED_ACTRESSES.filter((n) => n !== excludeName);
+    if (pool.length === 0) return BUNDLED_ACTRESSES[0] || '';
+    return pool[Math.floor(Math.random() * pool.length)];
+  }
+
   function setPendingWho(name) {
     const n = (name || '').trim();
     if (!n) return;
@@ -1700,6 +1720,14 @@
     // FANZA検索ボタン（「誰で」「何で」入力欄横）
     document.getElementById('btn-search-who-fanza').addEventListener('click', () => {
       openFanzaSearch(Modal.inputWho.value);
+    });
+    // 🎲 ランダムで内蔵リストから女優名を「誰で？」欄にセット（連打で振り直し）
+    document.getElementById('btn-random-who').addEventListener('click', () => {
+      const current = (Modal.inputWho.value || '').trim();
+      Modal.inputWho.value = getRandomActress(current);
+      // 入力欄を一瞬ハイライトしてフィードバック
+      Modal.inputWho.classList.add('is-random-flash');
+      setTimeout(() => Modal.inputWho.classList.remove('is-random-flash'), 350);
     });
     document.getElementById('btn-search-how-fanza').addEventListener('click', () => {
       openFanzaSearch(Modal.inputHow.value);

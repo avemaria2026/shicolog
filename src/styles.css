@@ -855,6 +855,32 @@ input {
 .btn-fanza-search__icon {
   font-size: 14px;
 }
+.btn-random {
+  flex-shrink: 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 18px;
+  line-height: 1;
+  white-space: nowrap;
+  transition: background 0.12s, transform 0.15s;
+  cursor: pointer;
+}
+.btn-random:active {
+  background: #f5a623;
+  color: #fff;
+  border-color: #f5a623;
+  transform: rotate(30deg) scale(1.1);
+}
+.field__input.is-random-flash {
+  animation: random-flash 0.35s ease;
+}
+@keyframes random-flash {
+  0%   { background: rgba(245, 166, 35, 0.3); }
+  100% { background: transparent; }
+}
 .chips--small {
   gap: 6px;
   margin-top: 8px;
