@@ -67,6 +67,10 @@
 
     <!-- ① ホーム画面 -->
     <section id="screen-home" class="screen screen--active">
+      <header class="home-header">
+        <h1 class="home-header__title">シコログ</h1>
+        <p class="home-header__tagline">あなたは何回賢者になれるか？？</p>
+      </header>
       <div class="home-center">
         <button id="btn-plus" class="btn-plus" type="button" aria-label="+1 記録する">
           <span class="btn-plus__label">＋1</span>
@@ -119,6 +123,25 @@
             <span class="fanza-card__icon" aria-hidden="true">📂</span>
             <span class="fanza-card__label">ジャンル別</span>
           </a>
+        </div>
+      </div>
+
+      <!-- シェア -->
+      <div class="home-share">
+        <h2 class="home-share__title">📤 友達にシェア</h2>
+        <p class="home-share__hint">「あなたは何回賢者になれるか？」と聞いてみよう</p>
+        <div class="home-share__row">
+          <button id="btn-share-x" class="share-btn share-btn--x" type="button">
+            <span aria-hidden="true">𝕏</span>
+            <span>でポスト</span>
+          </button>
+          <button id="btn-share-line" class="share-btn share-btn--line" type="button">
+            <span>LINEで送る</span>
+          </button>
+          <button id="btn-share-copy" class="share-btn share-btn--copy" type="button">
+            <span aria-hidden="true">🔗</span>
+            <span id="share-copy-label">URLをコピー</span>
+          </button>
         </div>
       </div>
     </section>

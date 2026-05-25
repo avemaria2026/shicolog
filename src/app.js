@@ -1831,6 +1831,56 @@
       renderPendingWhoHint();
     });
 
+    // ===== シェア機能 =====
+    const SHARE_URL = 'https://shicolog.vercel.app/';
+    const SHARE_TEXT = 'あなたは何回賢者になれる？\nシコログ — 射精をこっそり記録するアプリ';
+
+    document.getElementById('btn-share-x').addEventListener('click', () => {
+      const url = `https://x.com/intent/post?text=${encodeURIComponent(SHARE_TEXT)}&url=${encodeURIComponent(SHARE_URL)}&hashtags=シコログ`;
+      window.open(url, '_blank', 'noopener,noreferrer');
+    });
+
+    document.getElementById('btn-share-line').addEventListener('click', () => {
+      const url = `https://social-plugins.line.me/lineit/share?url=${encodeURIComponent(SHARE_URL)}`;
+      window.open(url, '_blank', 'noopener,noreferrer');
+    });
+
+    document.getElementById('btn-share-copy').addEventListener('click', async () => {
+      const btn = document.getElementById('btn-share-copy');
+      const label = document.getElementById('share-copy-label');
+      const textToCopy = `${SHARE_TEXT}\n${SHARE_URL}`;
+      let ok = false;
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(textToCopy);
+          ok = true;
+        } else {
+          // フォールバック：旧来の execCommand 方式
+          const ta = document.createElement('textarea');
+          ta.value = textToCopy;
+          ta.style.position = 'fixed';
+          ta.style.left = '-9999px';
+          document.body.appendChild(ta);
+          ta.select();
+          ok = document.execCommand('copy');
+          document.body.removeChild(ta);
+        }
+      } catch (e) {
+        ok = false;
+      }
+      if (ok) {
+        btn.classList.add('is-copied');
+        label.textContent = 'コピーしました！';
+        setTimeout(() => {
+          btn.classList.remove('is-copied');
+          label.textContent = 'URLをコピー';
+        }, 1800);
+      } else {
+        label.textContent = 'コピー失敗';
+        setTimeout(() => { label.textContent = 'URLをコピー'; }, 1800);
+      }
+    });
+
     // テーマ切替
     document.querySelectorAll('.theme-option').forEach((btn) => {
       btn.addEventListener('click', () => {
