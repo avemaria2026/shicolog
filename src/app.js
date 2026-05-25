@@ -155,6 +155,46 @@
     else addFavorite(name);
   }
 
+  // ===== 次の記録の「誰で」予約 =====
+  // お気に入りからFANZAに飛んだ女優名を一時保存しておき、戻ってきて＋1すると
+  // モーダルの「誰で」に自動入力される。sessionStorageでタブを閉じるとリセット。
+  // タイムアウト（既定3時間）も持たせて長時間放置を防ぐ。
+  const PENDING_WHO_KEY = 'shicolog:pending-who:v1';
+  const PENDING_WHO_TTL_MS = 3 * 60 * 60 * 1000;
+
+  function setPendingWho(name) {
+    const n = (name || '').trim();
+    if (!n) return;
+    const payload = { name: n, ts: Date.now() };
+    try {
+      sessionStorage.setItem(PENDING_WHO_KEY, JSON.stringify(payload));
+    } catch (e) {
+      // sessionStorage 使えない環境では予約なしで継続
+    }
+  }
+
+  function getPendingWho() {
+    try {
+      const raw = sessionStorage.getItem(PENDING_WHO_KEY);
+      if (!raw) return '';
+      const obj = JSON.parse(raw);
+      if (!obj || typeof obj.name !== 'string') return '';
+      if (Date.now() - (obj.ts || 0) > PENDING_WHO_TTL_MS) {
+        sessionStorage.removeItem(PENDING_WHO_KEY);
+        return '';
+      }
+      return obj.name;
+    } catch (e) {
+      return '';
+    }
+  }
+
+  function clearPendingWho() {
+    try {
+      sessionStorage.removeItem(PENDING_WHO_KEY);
+    } catch (e) {}
+  }
+
   // ===== FANZA連携 =====
   // 検索URL生成。アフィリエイトID未設定なら素のFANZA URLを返す。
   function makeFanzaSearchUrl(query) {
@@ -501,6 +541,8 @@
     document.getElementById('home-monthly-count').textContent = String(countThisMonth(records));
     document.getElementById('home-today-count').textContent = String(countToday(records));
     renderHomeFavorites();
+    renderPendingWhoHint();
+    renderFanzaLinks();
   }
 
   function renderHomeFavorites() {
@@ -562,8 +604,10 @@
       arrow.textContent = '→';
       btn.appendChild(arrow);
 
-      // タップ：FANZA検索（アフィリ経由）
+      // タップ：FANZA検索（アフィリ経由）＋次の＋1で「誰で」に自動入力する予約をセット
       btn.addEventListener('click', () => {
+        setPendingWho(name);
+        renderPendingWhoHint();
         openFanzaSearch(name);
       });
 
@@ -583,6 +627,20 @@
       frag.appendChild(li);
     });
     listEl.appendChild(frag);
+  }
+
+  function renderPendingWhoHint() {
+    const hint = document.getElementById('home-pending-hint');
+    const nameEl = document.getElementById('home-pending-name');
+    if (!hint || !nameEl) return;
+    const pending = getPendingWho();
+    if (pending) {
+      nameEl.textContent = pending;
+      hint.hidden = false;
+    } else {
+      nameEl.textContent = '';
+      hint.hidden = true;
+    }
   }
 
   // 共通：長押し検出（タッチ＆マウス両対応、スクロールで自動キャンセル）
@@ -725,15 +783,14 @@
 
     renderRanking('stats-who-ranking', aggregateRanking(records, 'who', 5));
     renderRanking('stats-how-ranking', aggregateRanking(records, 'how', 5));
-    renderFanzaLinks();
   }
 
-  // FANZA各種リンクを統計画面下にセット
+  // FANZA各種リンクをホーム画面にセット
   function renderFanzaLinks() {
     const entries = [
       ['link-fanza-ranking', 'https://www.dmm.co.jp/digital/videoa/-/ranking/'],
       ['link-fanza-new', 'https://www.dmm.co.jp/digital/videoa/-/list/=/sort=date/'],
-      ['link-fanza-actress', 'https://actress.dmm.co.jp/-/actress/'],
+      ['link-fanza-actress', 'https://osusume.dmm.co.jp/video/all/actresses/'],
       ['link-fanza-genre', 'https://www.dmm.co.jp/digital/videoa/-/genre/'],
     ];
     entries.forEach(([id, url]) => {
@@ -945,7 +1002,8 @@
         this.datetimeEl.hidden = true;
         this.btnSkip.hidden = false;
         this.btnDelete.hidden = true;
-        this.inputWho.value = '';
+        // FANZAから戻ってきた直後なら「誰で」に予約された名前を自動入力
+        this.inputWho.value = getPendingWho();
         this.inputHow.value = '';
       } else {
         this.titleEl.textContent = '記録を編集';
@@ -1031,6 +1089,7 @@
       const who = skipMemo ? '' : Modal.inputWho.value;
       const how = skipMemo ? '' : Modal.inputHow.value;
       addRecord({ who, how });
+      clearPendingWho();
       Modal.close();
       renderHome();
       // 履歴画面表示中なら同時に更新
@@ -1540,6 +1599,10 @@
           }
         }
         hiddenAt = null;
+        // FANZAから戻ってきたタイミングでホーム表示を更新（予約ヒントが出るように）
+        if (document.getElementById('screen-home').classList.contains('screen--active')) {
+          renderHome();
+        }
       }
     });
   }
@@ -1573,8 +1636,10 @@
         if (navigator.vibrate) {
           try { navigator.vibrate(30); } catch (_) {}
         }
-        // メモなし即記録
-        addRecord({ who: '', how: '' });
+        // メモなし即記録（予約された女優名があればそれで記録）
+        const pendingWho = getPendingWho();
+        addRecord({ who: pendingWho, how: '' });
+        clearPendingWho();
         renderHome();
         if (document.getElementById('screen-history').classList.contains('screen--active')) {
           renderHistory();
@@ -1685,6 +1750,12 @@
     // ロック画面のキャンセル（PIN設定／変更フローのみ表示される）
     document.getElementById('btn-lock-cancel').addEventListener('click', () => {
       Lock.cancelChangePin();
+    });
+
+    // 「予約中」ヒントの取り消し（ホーム画面）
+    document.getElementById('btn-cancel-pending').addEventListener('click', () => {
+      clearPendingWho();
+      renderPendingWhoHint();
     });
 
     // テーマ切替

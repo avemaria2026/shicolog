@@ -88,10 +88,38 @@
 
       <div class="home-favorites">
         <h2 class="home-favorites__title">今日はだれにする？</h2>
+        <p id="home-pending-hint" class="home-pending-hint" hidden>
+          <span>次に＋1を押すと <strong id="home-pending-name"></strong> で記録されます</span>
+          <button id="btn-cancel-pending" type="button" class="home-pending-hint__cancel">取り消し</button>
+        </p>
         <p id="home-favorites-empty" class="home-favorites__empty" hidden>
           記録モーダル（＋1タップ）の「誰で？」候補に出ている名前の★を押すと、ここに並びます。
         </p>
         <ul id="home-favorites-list" class="favorite-list"></ul>
+      </div>
+
+      <!-- FANZA連携セクション（公式サイトのコンテンツへのリンク） -->
+      <div class="home-fanza">
+        <h2 class="home-fanza__title">FANZAから探す</h2>
+        <p class="fanza-note">FANZA公式の人気・新着動画をチェック（外部サイトに移動します）</p>
+        <div class="fanza-grid">
+          <a id="link-fanza-ranking" class="fanza-card" href="#" target="_blank" rel="noopener noreferrer">
+            <span class="fanza-card__icon" aria-hidden="true">🏆</span>
+            <span class="fanza-card__label">人気ランキング</span>
+          </a>
+          <a id="link-fanza-new" class="fanza-card" href="#" target="_blank" rel="noopener noreferrer">
+            <span class="fanza-card__icon" aria-hidden="true">✨</span>
+            <span class="fanza-card__label">新着動画</span>
+          </a>
+          <a id="link-fanza-actress" class="fanza-card" href="#" target="_blank" rel="noopener noreferrer">
+            <span class="fanza-card__icon" aria-hidden="true">👤</span>
+            <span class="fanza-card__label">女優一覧</span>
+          </a>
+          <a id="link-fanza-genre" class="fanza-card" href="#" target="_blank" rel="noopener noreferrer">
+            <span class="fanza-card__icon" aria-hidden="true">📂</span>
+            <span class="fanza-card__label">ジャンル別</span>
+          </a>
+        </div>
       </div>
     </section>
 
@@ -155,29 +183,6 @@
         <ol id="stats-how-ranking" class="ranking"></ol>
       </div>
 
-      <!-- FANZA連携セクション（公式サイトのコンテンツへのリンク） -->
-      <div class="stats-section">
-        <h2 class="stats-section__title">FANZAから</h2>
-        <p class="fanza-note">FANZA公式の人気・新着動画をチェック（外部サイトに移動します）</p>
-        <div class="fanza-grid">
-          <a id="link-fanza-ranking" class="fanza-card" href="#" target="_blank" rel="noopener noreferrer">
-            <span class="fanza-card__icon" aria-hidden="true">🏆</span>
-            <span class="fanza-card__label">人気ランキング</span>
-          </a>
-          <a id="link-fanza-new" class="fanza-card" href="#" target="_blank" rel="noopener noreferrer">
-            <span class="fanza-card__icon" aria-hidden="true">✨</span>
-            <span class="fanza-card__label">新着動画</span>
-          </a>
-          <a id="link-fanza-actress" class="fanza-card" href="#" target="_blank" rel="noopener noreferrer">
-            <span class="fanza-card__icon" aria-hidden="true">👤</span>
-            <span class="fanza-card__label">女優一覧</span>
-          </a>
-          <a id="link-fanza-genre" class="fanza-card" href="#" target="_blank" rel="noopener noreferrer">
-            <span class="fanza-card__icon" aria-hidden="true">📂</span>
-            <span class="fanza-card__label">ジャンル別</span>
-          </a>
-        </div>
-      </div>
     </section>
 
     <!-- ④ 設定画面 -->

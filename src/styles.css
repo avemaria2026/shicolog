@@ -199,6 +199,47 @@ input {
   color: var(--text);
   text-align: center;
 }
+.home-pending-hint {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  background: rgba(245, 166, 35, 0.12);
+  border: 1px solid rgba(245, 166, 35, 0.4);
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--text);
+}
+.home-pending-hint strong {
+  color: #f5a623;
+}
+.home-pending-hint__cancel {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-sub);
+  font-size: 12px;
+  cursor: pointer;
+}
+.home-pending-hint__cancel:active {
+  background: var(--surface-2, rgba(0, 0, 0, 0.04));
+}
+
+/* ===== ホーム画面：FANZAから探す ===== */
+.home-fanza {
+  margin: 8px 0 16px;
+}
+.home-fanza__title {
+  margin: 0 0 8px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+  text-align: center;
+}
 .home-favorites__empty {
   margin: 0;
   padding: 16px;
