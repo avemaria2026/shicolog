@@ -767,14 +767,69 @@
       meta.appendChild(makeMetaField('ジャンル', r.how));
       li.appendChild(meta);
 
-      li.addEventListener('click', () => {
+      // 編集モードに入る本体クリック
+      const openEdit = () => {
         const rec = findRecord(r.id);
         if (rec) Modal.open('edit', rec);
+      };
+      dt.addEventListener('click', openEdit);
+      meta.addEventListener('click', openEdit);
+
+      // 📤 Xシェアボタン（女優名のFANZAアフィリリンク付き）
+      const shareBtn = document.createElement('button');
+      shareBtn.type = 'button';
+      shareBtn.className = 'history-item__share';
+      shareBtn.setAttribute('aria-label', 'この記録をXにシェア');
+      shareBtn.innerHTML = '<span aria-hidden="true">📤</span><span>X</span>';
+      shareBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        shareRecordToX(r);
       });
+      li.appendChild(shareBtn);
 
       frag.appendChild(li);
     });
     list.appendChild(frag);
+  }
+
+  // 履歴の1レコードをX(Twitter)にシェア（女優名のFANZAアフィリ検索URLを添付）
+  function shareRecordToX(record) {
+    const who = (record.who || '').trim();
+    const how = (record.how || '').trim();
+
+    // 文面の組み立て
+    let text;
+    if (who && how) {
+      text = `${who}の${how}で賢者になりました`;
+    } else if (who) {
+      text = `${who}で賢者になりました`;
+    } else if (how) {
+      text = `${how}で賢者になりました`;
+    } else {
+      text = '今日も賢者になりました';
+    }
+    text += '\n— シコログで記録 📓';
+
+    // URL：女優名があれば女優検索、なければジャンル検索、それも無ければシコログ自身
+    let url;
+    if (who) {
+      url = makeFanzaSearchUrl(who);
+    } else if (how) {
+      url = makeFanzaSearchUrl(how);
+    } else {
+      url = 'https://shicolog.vercel.app/';
+    }
+
+    // ハッシュタグ：シコログ + 女優名（あれば）
+    // ※ ハッシュタグに使えない記号類を除去
+    const tags = ['シコログ'];
+    if (who) {
+      const safe = who.replace(/[^\p{L}\p{N}_]/gu, '');
+      if (safe) tags.push(safe);
+    }
+
+    const intent = `https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}&hashtags=${encodeURIComponent(tags.join(','))}`;
+    window.open(intent, '_blank', 'noopener,noreferrer');
   }
 
   function makeMetaField(labelText, value) {
@@ -1833,7 +1888,7 @@
 
     // ===== シェア機能 =====
     const SHARE_URL = 'https://shicolog.vercel.app/';
-    const SHARE_TEXT = 'あなたは何回賢者になれる？\nシコログ — 射精をこっそり記録するアプリ';
+    const SHARE_TEXT = 'あなたはどこまで賢者になれるのか？\nシコログ — 射精をこっそり記録するアプリ';
 
     document.getElementById('btn-share-x').addEventListener('click', () => {
       const url = `https://x.com/intent/post?text=${encodeURIComponent(SHARE_TEXT)}&url=${encodeURIComponent(SHARE_URL)}&hashtags=シコログ`;

@@ -429,12 +429,13 @@ input {
   gap: 8px;
 }
 .history-item {
+  position: relative;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 12px 14px;
+  padding-right: 64px; /* シェアボタン用スペース */
   box-shadow: var(--shadow);
-  cursor: pointer;
   transition: background 0.12s;
 }
 .history-item:active {
@@ -444,12 +445,37 @@ input {
   font-size: 13px;
   color: var(--text-sub);
   margin-bottom: 4px;
+  cursor: pointer;
 }
 .history-item__meta {
   display: flex;
   flex-wrap: wrap;
   gap: 6px 12px;
   font-size: 15px;
+  cursor: pointer;
+}
+.history-item__share {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  background: #000;
+  border: none;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.1s, opacity 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.history-item__share:active {
+  transform: translateY(-50%) scale(0.92);
+  opacity: 0.85;
 }
 .history-item__field {
   display: inline-flex;
