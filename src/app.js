@@ -185,6 +185,39 @@
     return pool[Math.floor(Math.random() * pool.length)];
   }
 
+  // 🎲 ランダム候補用：内蔵のFANZA人気ジャンルリスト
+  // ※ FANZAページからCORS制約で動的取得できないため、定期的に手動で更新する想定
+  const BUNDLED_GENRES = [
+    // 体型・部位
+    '巨乳', '爆乳', '美乳', '貧乳', '美脚',
+    '美尻', 'パイパン', 'スレンダー', 'ぽっちゃり',
+    // 属性・職業
+    '人妻', '熟女', '若妻', '美熟女', '美魔女',
+    'JK', '女子大生', 'OL', 'ナース', '教師',
+    'メイド', '秘書', 'グラビア', 'アイドル', 'モデル',
+    'ギャル', '黒ギャル', '美少女', '清楚', 'ロリ系',
+    // シチュエーション
+    '素人', 'ハメ撮り', '主観', 'ナンパ', '即ハメ',
+    'NTR', '寝取られ', '不倫', '浮気', 'ハーレム',
+    '3P・4P', '乱交', '痴漢', '凌辱', '輪姦',
+    'デリヘル', 'ソープ', '風俗', '温泉', '野外',
+    '露出', '電車', 'オフィス', '学校', '旅館',
+    // 行為・属性
+    '中出し', '大量中出し', '顔射', 'ぶっかけ', '潮吹き',
+    'フェラ', 'パイズリ', '騎乗位', 'イラマチオ', 'アクメ',
+    // コスチューム
+    '制服', '水着', 'スク水', 'チャイナドレス', 'バニーガール',
+    'レオタード', '体操着',
+    // その他
+    '痴女', 'M男', '逆レイプ', 'レズ', 'アナル', '足フェチ',
+  ];
+
+  function getRandomGenre(excludeName = '') {
+    const pool = BUNDLED_GENRES.filter((n) => n !== excludeName);
+    if (pool.length === 0) return BUNDLED_GENRES[0] || '';
+    return pool[Math.floor(Math.random() * pool.length)];
+  }
+
   function setPendingWho(name) {
     const n = (name || '').trim();
     if (!n) return;
@@ -730,7 +763,7 @@
       const meta = document.createElement('div');
       meta.className = 'history-item__meta';
       meta.appendChild(makeMetaField('誰で', r.who));
-      meta.appendChild(makeMetaField('何で', r.how));
+      meta.appendChild(makeMetaField('ジャンル', r.how));
       li.appendChild(meta);
 
       li.addEventListener('click', () => {
@@ -1724,13 +1757,21 @@
     document.getElementById('btn-search-who-fanza').addEventListener('click', () => {
       openFanzaSearch(Modal.inputWho.value);
     });
-    // 🎲 ランダムで内蔵リストから女優名を「誰で？」欄にセット（連打で振り直し）
+    // ⚀ ランダムで内蔵リストから女優名を「誰で？」欄にセット（連打で振り直し）
     document.getElementById('btn-random-who').addEventListener('click', () => {
       const current = (Modal.inputWho.value || '').trim();
       Modal.inputWho.value = getRandomActress(current);
       // 入力欄を一瞬ハイライトしてフィードバック
       Modal.inputWho.classList.add('is-random-flash');
       setTimeout(() => Modal.inputWho.classList.remove('is-random-flash'), 350);
+    });
+    // ⚀ ランダムで内蔵リストからジャンル名を「ジャンルは？」欄にセット
+    document.getElementById('btn-random-how').addEventListener('click', () => {
+      const current = (Modal.inputHow.value || '').trim();
+      Modal.inputHow.value = getRandomGenre(current);
+      Modal.syncChipSelection();
+      Modal.inputHow.classList.add('is-random-flash');
+      setTimeout(() => Modal.inputHow.classList.remove('is-random-flash'), 350);
     });
     document.getElementById('btn-search-how-fanza').addEventListener('click', () => {
       openFanzaSearch(Modal.inputHow.value);

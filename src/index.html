@@ -6,18 +6,18 @@
   <meta name="theme-color" content="#3b6e8f">
   <meta name="referrer" content="no-referrer">
   <title>シコログ — 回数を記録するプライベートカウンター</title>
-  <meta name="description" content="シコログは、回数を「いつ・誰で・何で」と一緒に記録できるプライベートなカウンターアプリ。データは端末のブラウザだけに保存され、外部送信は一切しません。スマホのホーム画面にも置けます。">
+  <meta name="description" content="シコログは、回数を「いつ・誰で・ジャンル」と一緒に記録できるプライベートなカウンターアプリ。データは端末のブラウザだけに保存され、外部送信は一切しません。スマホのホーム画面にも置けます。FANZA女優・ジャンル検索からの記録ワンタップ。">
 
   <!-- Open Graph -->
   <meta property="og:type" content="website">
   <meta property="og:title" content="シコログ — 回数を記録するプライベートカウンター">
-  <meta property="og:description" content="回数を「いつ・誰で・何で」と一緒に記録できるプライベートなカウンターアプリ。端末完結・外部送信ゼロ。">
+  <meta property="og:description" content="回数を「いつ・誰で・ジャンル」と一緒に記録できるプライベートなカウンターアプリ。端末完結・外部送信ゼロ。">
   <meta property="og:image" content="icon.svg">
 
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="シコログ — 回数を記録するプライベートカウンター">
-  <meta name="twitter:description" content="回数を「いつ・誰で・何で」と一緒に記録できるプライベートなカウンターアプリ。端末完結・外部送信ゼロ。">
+  <meta name="twitter:description" content="回数を「いつ・誰で・ジャンル」と一緒に記録できるプライベートなカウンターアプリ。端末完結・外部送信ゼロ。">
 
   <link rel="manifest" href="manifest.json">
   <link rel="icon" type="image/svg+xml" href="icon.svg">
@@ -179,7 +179,7 @@
       </div>
 
       <div class="stats-section">
-        <h2 class="stats-section__title">「何で」ランキング</h2>
+        <h2 class="stats-section__title">「ジャンル」ランキング</h2>
         <ol id="stats-how-ranking" class="ranking"></ol>
       </div>
 
@@ -313,17 +313,15 @@
         </div>
 
         <div class="field">
-          <span class="field__label">何で？</span>
+          <span class="field__label">ジャンルは？</span>
           <div id="how-presets" class="chips">
-            <button class="chip" data-preset="動画" type="button">動画</button>
             <button class="chip" data-preset="グラビア" type="button">グラビア</button>
-            <button class="chip" data-preset="漫画" type="button">漫画</button>
-            <button class="chip" data-preset="SNS" type="button">SNS</button>
-            <button class="chip" data-preset="風俗" type="button">風俗</button>
-            <button class="chip" data-preset="その他" type="button">その他</button>
           </div>
           <div class="field__row">
-            <input id="input-how" class="field__input" type="text" autocomplete="off" placeholder="自由入力もOK">
+            <input id="input-how" class="field__input" type="text" autocomplete="off" placeholder="（⚀でランダムジャンル）">
+            <button id="btn-random-how" class="btn-random" type="button" aria-label="ランダムでジャンル名を入れる">
+              <span aria-hidden="true">⚀</span>
+            </button>
             <button id="btn-search-how-fanza" class="btn-fanza-search" type="button" aria-label="この語でFANZA検索">
               <span class="btn-fanza-search__icon" aria-hidden="true">🔎</span>
               <span class="btn-fanza-search__label">FANZA</span>
