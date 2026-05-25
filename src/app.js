@@ -194,8 +194,9 @@
     // 属性・職業
     '人妻', '熟女', '若妻', '美熟女', '美魔女',
     'JK', '女子大生', 'OL', 'ナース', '教師',
-    'メイド', '秘書', 'グラビア', 'アイドル', 'モデル',
-    'ギャル', '黒ギャル', '美少女', '清楚', 'ロリ系',
+    'メイド', '秘書', 'グラビア', 'グラビアアイドル', 'アイドル',
+    'モデル', 'ギャル', '黒ギャル', '美少女', '清楚', 'ロリ系',
+    '知り合い',
     // シチュエーション
     '素人', 'ハメ撮り', '主観', 'ナンパ', '即ハメ',
     'NTR', '寝取られ', '不倫', '浮気', 'ハーレム',
@@ -1757,7 +1758,7 @@
     document.getElementById('btn-search-who-fanza').addEventListener('click', () => {
       openFanzaSearch(Modal.inputWho.value);
     });
-    // ⚀ ランダムで内蔵リストから女優名を「誰で？」欄にセット（連打で振り直し）
+    // 🎲 ランダムで内蔵リストから女優名を「誰で？」欄にセット（連打で振り直し）
     document.getElementById('btn-random-who').addEventListener('click', () => {
       const current = (Modal.inputWho.value || '').trim();
       Modal.inputWho.value = getRandomActress(current);
@@ -1765,7 +1766,7 @@
       Modal.inputWho.classList.add('is-random-flash');
       setTimeout(() => Modal.inputWho.classList.remove('is-random-flash'), 350);
     });
-    // ⚀ ランダムで内蔵リストからジャンル名を「ジャンルは？」欄にセット
+    // 🎲 ランダムで内蔵リストからジャンル名を「ジャンルは？」欄にセット
     document.getElementById('btn-random-how').addEventListener('click', () => {
       const current = (Modal.inputHow.value || '').trim();
       Modal.inputHow.value = getRandomGenre(current);
