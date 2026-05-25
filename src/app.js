@@ -14,6 +14,7 @@
   const BIOMETRIC_KEY = 'shicolog:biometric:v1';
   const LOCK_DISABLED_KEY = 'shicolog:lock-disabled:v1';
   const THEME_KEY = 'shicolog:theme:v1';
+  const FAVORITES_KEY = 'shicolog:favorites:v1';
 
   // FANZA（DMMアフィリエイト）連携設定
   // アフィリエイトID承認後、ここを書き換えると全リンクが自動でアフィリエイトリンクに切り替わる
@@ -75,6 +76,7 @@
 
   function clearAllRecords() {
     localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(FAVORITES_KEY);
   }
 
   // ===== ストレージ：PIN =====
@@ -107,6 +109,50 @@
 
   function clearBiometric() {
     localStorage.removeItem(BIOMETRIC_KEY);
+  }
+
+  // ===== ストレージ：お気に入り女優 =====
+  function loadFavorites() {
+    try {
+      const raw = localStorage.getItem(FAVORITES_KEY);
+      if (!raw) return [];
+      const data = JSON.parse(raw);
+      return Array.isArray(data) ? data.filter((v) => typeof v === 'string' && v.trim()) : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function saveFavorites(list) {
+    localStorage.setItem(FAVORITES_KEY, JSON.stringify(list));
+  }
+
+  function isFavorite(name) {
+    const n = (name || '').trim();
+    if (!n) return false;
+    return loadFavorites().includes(n);
+  }
+
+  function addFavorite(name) {
+    const n = (name || '').trim();
+    if (!n) return;
+    const list = loadFavorites();
+    if (!list.includes(n)) {
+      list.push(n);
+      saveFavorites(list);
+    }
+  }
+
+  function removeFavorite(name) {
+    const n = (name || '').trim();
+    if (!n) return;
+    const list = loadFavorites().filter((v) => v !== n);
+    saveFavorites(list);
+  }
+
+  function toggleFavorite(name) {
+    if (isFavorite(name)) removeFavorite(name);
+    else addFavorite(name);
   }
 
   // ===== FANZA連携 =====
@@ -385,6 +431,34 @@
       .map(([name, count]) => ({ name, count }));
   }
 
+  // 指定の who 名で最後に記録した日時を返す。なければ null。
+  function getLastFapDate(name) {
+    const n = (name || '').trim();
+    if (!n) return null;
+    const records = loadRecords();
+    let latest = null;
+    for (const r of records) {
+      if ((r.who || '').trim() !== n) continue;
+      const t = new Date(r.datetime).getTime();
+      if (latest === null || t > latest) latest = t;
+    }
+    return latest === null ? null : new Date(latest);
+  }
+
+  // 「3日前」「2週間前」「1か月前」など、ご無沙汰感が伝わる相対日表記
+  function formatRelativeDays(date) {
+    if (!date) return '未';
+    const now = Date.now();
+    const diffMs = now - date.getTime();
+    const diffDays = Math.floor(diffMs / (24 * 60 * 60 * 1000));
+    if (diffDays <= 0) return '今日';
+    if (diffDays === 1) return '昨日';
+    if (diffDays < 7) return `${diffDays}日前`;
+    if (diffDays < 30) return `${Math.floor(diffDays / 7)}週間前`;
+    if (diffDays < 365) return `${Math.floor(diffDays / 30)}か月前`;
+    return `${Math.floor(diffDays / 365)}年前`;
+  }
+
   // 過去のwho/how入力値を使用頻度順で取得（候補チップ用）
   function getValueSuggestions(field, limit = 8, excludeSet = null) {
     const records = loadRecords();
@@ -426,6 +500,123 @@
     const records = loadRecords();
     document.getElementById('home-monthly-count').textContent = String(countThisMonth(records));
     document.getElementById('home-today-count').textContent = String(countToday(records));
+    renderHomeFavorites();
+  }
+
+  function renderHomeFavorites() {
+    const listEl = document.getElementById('home-favorites-list');
+    const emptyEl = document.getElementById('home-favorites-empty');
+    if (!listEl) return;
+
+    const favorites = loadFavorites();
+    listEl.innerHTML = '';
+
+    if (favorites.length === 0) {
+      emptyEl.hidden = false;
+      return;
+    }
+    emptyEl.hidden = true;
+
+    // 「最終シコ日が古い順 → 未記録は最後」で並べる：ご無沙汰女優を上に出す
+    const decorated = favorites.map((name) => ({
+      name,
+      lastDate: getLastFapDate(name),
+    }));
+    decorated.sort((a, b) => {
+      if (a.lastDate && b.lastDate) return a.lastDate - b.lastDate;
+      if (!a.lastDate && !b.lastDate) return 0;
+      if (!a.lastDate) return 1;
+      return -1;
+    });
+
+    const frag = document.createDocumentFragment();
+    decorated.forEach(({ name, lastDate }) => {
+      const li = document.createElement('li');
+      li.className = 'favorite-list__item';
+
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'favorite-card';
+      btn.dataset.name = name;
+      btn.setAttribute('aria-label', `${name} をFANZAで検索`);
+
+      const star = document.createElement('span');
+      star.className = 'favorite-card__star';
+      star.setAttribute('aria-hidden', 'true');
+      star.textContent = '★';
+      btn.appendChild(star);
+
+      const nameEl = document.createElement('span');
+      nameEl.className = 'favorite-card__name';
+      nameEl.textContent = name;
+      btn.appendChild(nameEl);
+
+      const ago = document.createElement('span');
+      ago.className = 'favorite-card__ago';
+      ago.textContent = formatRelativeDays(lastDate);
+      btn.appendChild(ago);
+
+      const arrow = document.createElement('span');
+      arrow.className = 'favorite-card__arrow';
+      arrow.setAttribute('aria-hidden', 'true');
+      arrow.textContent = '→';
+      btn.appendChild(arrow);
+
+      // タップ：FANZA検索（アフィリ経由）
+      btn.addEventListener('click', () => {
+        openFanzaSearch(name);
+      });
+
+      // 長押し：お気に入りから外す（500ms）
+      attachLongPress(btn, () => {
+        showConfirm(
+          `「${name}」をお気に入りから外しますか？`,
+          () => {
+            removeFavorite(name);
+            renderHomeFavorites();
+          },
+          '外す'
+        );
+      });
+
+      li.appendChild(btn);
+      frag.appendChild(li);
+    });
+    listEl.appendChild(frag);
+  }
+
+  // 共通：長押し検出（タッチ＆マウス両対応、スクロールで自動キャンセル）
+  function attachLongPress(el, onLongPress, ms = 500) {
+    let timer = null;
+    let triggered = false;
+    const start = () => {
+      triggered = false;
+      timer = setTimeout(() => {
+        triggered = true;
+        onLongPress();
+      }, ms);
+    };
+    const cancel = () => {
+      if (timer) {
+        clearTimeout(timer);
+        timer = null;
+      }
+    };
+    el.addEventListener('touchstart', start, { passive: true });
+    el.addEventListener('touchend', cancel);
+    el.addEventListener('touchmove', cancel);
+    el.addEventListener('touchcancel', cancel);
+    el.addEventListener('mousedown', start);
+    el.addEventListener('mouseup', cancel);
+    el.addEventListener('mouseleave', cancel);
+    // 長押し成立時は通常のclickをブロック
+    el.addEventListener('click', (e) => {
+      if (triggered) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        triggered = false;
+      }
+    }, true);
   }
 
   function renderHistory() {
@@ -702,10 +893,16 @@
     renderWhoSuggestions() {
       const el = this.whoSuggestionsEl;
       el.innerHTML = '';
+      // 履歴の使用頻度上位 + お気に入り（重複は除外）を候補に出す
+      const favorites = loadFavorites();
       const suggestions = getValueSuggestions('who', 8);
-      if (suggestions.length === 0) return;
+      const merged = Array.from(new Set([...favorites, ...suggestions]));
+      if (merged.length === 0) return;
       const frag = document.createDocumentFragment();
-      suggestions.forEach((value) => {
+      merged.forEach((value) => {
+        const wrap = document.createElement('span');
+        wrap.className = 'chip-with-star';
+
         const chip = document.createElement('button');
         chip.type = 'button';
         chip.className = 'chip';
@@ -714,7 +911,26 @@
           this.inputWho.value = value;
           this.inputWho.focus();
         });
-        frag.appendChild(chip);
+        wrap.appendChild(chip);
+
+        const star = document.createElement('button');
+        star.type = 'button';
+        star.className = 'chip-star';
+        star.setAttribute('aria-label', `${value} をお気に入りに追加／解除`);
+        const refreshStar = () => {
+          const on = isFavorite(value);
+          star.textContent = on ? '★' : '☆';
+          star.classList.toggle('is-on', on);
+        };
+        refreshStar();
+        star.addEventListener('click', (e) => {
+          e.stopPropagation();
+          toggleFavorite(value);
+          refreshStar();
+        });
+        wrap.appendChild(star);
+
+        frag.appendChild(wrap);
       });
       el.appendChild(frag);
     },
@@ -880,11 +1096,13 @@
   // ===== JSON入出力（端末間手動同期） =====
   function exportJSON() {
     const records = loadRecords();
+    const favorites = loadFavorites();
     const payload = {
       app: 'count-app',
-      formatVersion: 1,
+      formatVersion: 2,
       exportedAt: new Date().toISOString(),
       records,
+      favorites,
     };
     const json = JSON.stringify(payload, null, 2);
     const blob = new Blob([json], { type: 'application/json' });
@@ -906,7 +1124,11 @@
     if (!incoming) {
       throw new Error('records が見つかりません。counter形式のJSONではありません');
     }
-    return mergeIncomingRecords(incoming);
+    const result = mergeIncomingRecords(incoming);
+    if (Array.isArray(data.favorites)) {
+      mergeIncomingFavorites(data.favorites);
+    }
+    return result;
   }
 
   // 取り込み共通：既存とマージ（同IDは上書き、未存在は追加）
@@ -934,6 +1156,23 @@
     const merged = Array.from(map.values());
     saveRecords(merged);
     return { added, updated, total: merged.length };
+  }
+
+  // お気に入りのマージ（重複は無視、同じ並び順で追加）
+  function mergeIncomingFavorites(incoming) {
+    const valid = incoming.filter((v) => typeof v === 'string' && v.trim());
+    if (valid.length === 0) return;
+    const existing = loadFavorites();
+    const set = new Set(existing);
+    const merged = existing.slice();
+    valid.forEach((v) => {
+      const n = v.trim();
+      if (!set.has(n)) {
+        merged.push(n);
+        set.add(n);
+      }
+    });
+    saveFavorites(merged);
   }
 
   // ===== 引き継ぎコード（ふっかつのじゅもん） =====
@@ -979,9 +1218,10 @@
     }
     const payload = {
       app: 'count-app',
-      formatVersion: 1,
+      formatVersion: 2,
       exportedAt: new Date().toISOString(),
       records: loadRecords(),
+      favorites: loadFavorites(),
     };
     const json = JSON.stringify(payload);
     const compressed = await gzipCompress(json);
@@ -1025,7 +1265,11 @@
     if (!data || !Array.isArray(data.records)) {
       throw new Error('counter形式のデータではありません');
     }
-    return mergeIncomingRecords(data.records);
+    const result = mergeIncomingRecords(data.records);
+    if (Array.isArray(data.favorites)) {
+      mergeIncomingFavorites(data.favorites);
+    }
+    return result;
   }
 
   // ===== ロック =====
