@@ -881,6 +881,21 @@ input {
   background: rgba(59, 110, 143, 0.08);
 }
 
+.lock__cancel {
+  display: inline-block;
+  margin: 18px auto 0;
+  padding: 8px 16px;
+  background: transparent;
+  border: none;
+  color: var(--text-sub);
+  font-size: 14px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.lock__cancel:active {
+  color: var(--text);
+}
+
 .settings-item:disabled {
   opacity: 0.5;
   cursor: default;

@@ -59,6 +59,7 @@
         <button class="pin-key" data-key="0" type="button">0</button>
         <button class="pin-key pin-key--del" data-key="del" type="button" aria-label="1文字削除">⌫</button>
       </div>
+      <button id="btn-lock-cancel" class="lock__cancel" type="button" hidden>キャンセル</button>
     </div>
   </div>
 
@@ -212,16 +213,16 @@
 
       <div class="settings-group">
         <h2 class="settings-group__title">セキュリティ</h2>
-        <button id="btn-change-pin" class="settings-item" type="button">
+        <button id="btn-toggle-lock" class="settings-item" type="button">
+          <span id="lock-toggle-label" class="settings-item__label">PINロックを有効化</span>
+          <span id="lock-toggle-hint" class="settings-item__hint">現在：オフ（起動時の認証なし）。気になる方は4桁PINでロックできます</span>
+        </button>
+        <button id="btn-change-pin" class="settings-item" type="button" hidden>
           <span class="settings-item__label">PINを変更</span>
         </button>
         <button id="btn-toggle-biometric" class="settings-item" type="button">
           <span id="biometric-label" class="settings-item__label">生体認証を有効化</span>
-          <span id="biometric-hint" class="settings-item__hint">指紋・顔認証で素早く解除</span>
-        </button>
-        <button id="btn-toggle-lock" class="settings-item" type="button">
-          <span id="lock-toggle-label" class="settings-item__label">ロックを無効化</span>
-          <span id="lock-toggle-hint" class="settings-item__hint">起動時のPIN/生体認証をスキップ</span>
+          <span id="biometric-hint" class="settings-item__hint">指紋・顔認証で素早く解除（PINロックが必要）</span>
         </button>
       </div>
 

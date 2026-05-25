@@ -623,13 +623,20 @@
   function refreshLockToggle() {
     const label = document.getElementById('lock-toggle-label');
     const hint = document.getElementById('lock-toggle-hint');
+    const changePinBtn = document.getElementById('btn-change-pin');
     if (!label) return;
-    if (isLockDisabled()) {
-      label.textContent = 'ロックを有効化する';
-      hint.textContent = '現在：無効（起動時のPIN/生体認証なし）';
+    const hasPin = !!loadPin();
+    // PIN変更ボタンは PIN設定済みのときだけ表示
+    if (changePinBtn) changePinBtn.hidden = !hasPin;
+    if (!hasPin) {
+      label.textContent = 'PINロックを有効化';
+      hint.textContent = '現在：オフ（起動時の認証なし）。気になる方は4桁PINでロックできます';
+    } else if (isLockDisabled()) {
+      label.textContent = 'PINロックを有効化する';
+      hint.textContent = '現在：オフ（起動時の認証なし）';
     } else {
-      label.textContent = 'ロックを無効化する';
-      hint.textContent = '現在：有効（起動時にPIN/生体認証が必要）';
+      label.textContent = 'PINロックを無効化する';
+      hint.textContent = '現在：オン（起動時にPIN/生体認証が必要）';
     }
   }
 
@@ -644,6 +651,14 @@
       label.textContent = '生体認証を無効化';
       hint.textContent = 'この端末で登録済み';
       btn.disabled = false;
+      return;
+    }
+
+    // PIN未設定では生体認証は使えない（PINがフォールバックとして必要）
+    if (!loadPin()) {
+      label.textContent = '生体認証を有効化';
+      hint.textContent = '先にPINロックを有効化してください';
+      btn.disabled = true;
       return;
     }
 
@@ -1040,6 +1055,7 @@
       this.errorEl = document.getElementById('lock-error');
       this.dotsEl = document.getElementById('pin-display');
       this.bioBtn = document.getElementById('btn-biometric-unlock');
+      this.cancelBtn = document.getElementById('btn-lock-cancel');
     },
 
     updateBiometricButton() {
@@ -1104,6 +1120,25 @@
           break;
       }
       this.updateBiometricButton();
+      this.updateCancelButton();
+    },
+
+    updateCancelButton() {
+      // unlock 状態（=起動時の認証）ではキャンセル不可。設定/変更フローのみ表示
+      if (!this.cancelBtn) return;
+      this.cancelBtn.hidden = (this.state === 'unlock');
+    },
+
+    // PIN設定/変更フローの中断
+    cancelChangePin() {
+      this.pinBuffer = '';
+      this.newPinDraft = '';
+      this.onUnlockSuccess = null;
+      const stored = loadPin();
+      // PIN未設定ならロック自体が無いので unlocked 扱い
+      this.isUnlocked = !stored || isLockDisabled();
+      this.hide();
+      switchTab('settings');
     },
 
     updateDots() {
@@ -1198,13 +1233,13 @@
       }
     },
 
-    // 起動時／再ロック時に呼ぶ。PIN未設定なら設定モードで開く。
+    // 起動時／再ロック時に呼ぶ。PIN未設定なら認証スキップして即アプリを開く。
     requireAuth(onSuccess) {
       this.onUnlockSuccess = onSuccess || null;
       const stored = loadPin();
 
-      // PIN設定済み かつ ロック無効化中ならスキップして即解除
-      if (stored && isLockDisabled()) {
+      // PIN未設定、または PIN設定済み + ロック無効化中ならスキップして即解除
+      if (!stored || isLockDisabled()) {
         this.isUnlocked = true;
         // ロック画面を隠し、アプリ本体を表示状態にする
         this.el.classList.remove('is-open');
@@ -1218,20 +1253,17 @@
       }
 
       this.show();
-      if (!stored) {
-        this.setState('set-new');
-      } else {
-        this.setState('unlock');
-      }
+      this.setState('unlock');
       this.isUnlocked = false;
       // 生体認証が登録済みなら自動で試す（失敗時はPIN入力にフォールバック）
-      if (this.state === 'unlock' && loadBiometric()) {
+      if (loadBiometric()) {
         setTimeout(() => this.tryBiometric(), 200);
       }
     },
 
-    // PIN変更フロー開始（設定済み前提）
-    startChangePin() {
+    // PIN設定/変更フロー開始。PIN未設定なら新規設定、設定済みなら変更フロー。
+    // onDone を渡すと完了後にそれが呼ばれる（未指定時はホームへ戻る）
+    startChangePin(onDone) {
       const stored = loadPin();
       this.show();
       this.isUnlocked = false;
@@ -1241,8 +1273,11 @@
         this.setState('change-current');
       }
       this.onUnlockSuccess = () => {
-        // 変更完了後はホームに戻る
-        switchTab('home');
+        if (typeof onDone === 'function') {
+          onDone();
+        } else {
+          switchTab('home');
+        }
       };
     },
   };
@@ -1395,12 +1430,17 @@
       );
     });
     document.getElementById('btn-change-pin').addEventListener('click', () => {
-      Lock.startChangePin();
+      Lock.startChangePin(() => switchTab('settings'));
     });
 
     // 生体認証ボタン（ロック画面）
     document.getElementById('btn-biometric-unlock').addEventListener('click', () => {
       Lock.tryBiometric();
+    });
+
+    // ロック画面のキャンセル（PIN設定／変更フローのみ表示される）
+    document.getElementById('btn-lock-cancel').addEventListener('click', () => {
+      Lock.cancelChangePin();
     });
 
     // テーマ切替
@@ -1423,13 +1463,22 @@
 
     // ロック有効/無効トグル
     document.getElementById('btn-toggle-lock').addEventListener('click', () => {
+      const hasPin = !!loadPin();
+      if (!hasPin) {
+        // PIN未設定 → PIN設定フローへ。完了後は設定画面に戻りトグル表示を更新
+        Lock.startChangePin(() => {
+          setLockDisabled(false);
+          switchTab('settings');
+        });
+        return;
+      }
       if (isLockDisabled()) {
         // 再度有効化（警告不要）
         setLockDisabled(false);
         refreshLockToggle();
       } else {
         showConfirm(
-          'ロックを無効化しますか？\n他人が端末を触ったときにデータが見えてしまいます。本当に無効化しますか？\n（PINはそのまま保存され、いつでも再有効化できます）',
+          'PINロックを無効化しますか？\n他人が端末を触ったときにデータが見えてしまいます。本当に無効化しますか？\n（PINはそのまま保存され、いつでも再有効化できます）',
           () => {
             setLockDisabled(true);
             refreshLockToggle();
@@ -1615,6 +1664,8 @@
         Lock.appendDigit(e.key);
       } else if (e.key === 'Backspace') {
         Lock.removeDigit();
+      } else if (e.key === 'Escape' && Lock.state !== 'unlock') {
+        Lock.cancelChangePin();
       }
     });
   }
