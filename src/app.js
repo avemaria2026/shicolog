@@ -612,11 +612,11 @@
       const shareBtn = document.createElement('button');
       shareBtn.type = 'button';
       shareBtn.className = 'history-item__share';
-      shareBtn.setAttribute('aria-label', 'この記録をXにシェア');
-      shareBtn.innerHTML = '<span aria-hidden="true">📤</span><span>X</span>';
+      shareBtn.setAttribute('aria-label', 'この記録をシェア');
+      shareBtn.innerHTML = '<span aria-hidden="true">📤</span><span>シェア</span>';
       shareBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        shareRecordToX(r);
+        shareRecord(r);
       });
       li.appendChild(shareBtn);
 
@@ -626,43 +626,131 @@
   }
 
   // 履歴の1レコードをX(Twitter)にシェア（女優名のFANZAアフィリ検索URLを添付）
-  function shareRecordToX(record) {
+  // ===== シェア関連 =====
+  const APP_URL = 'https://shicolog.vercel.app/';
+  const APP_SHARE_TEXT = 'あなたはどこまで賢者になれるのか？\nシコログ — 射精をこっそり記録するアプリ';
+
+  // Web Share API が使える環境ではネイティブ共有シート（X/LINE/Mail等のアプリが直接開く）。
+  // 使えない or キャンセル以外の失敗時は、第2引数のフォールバックURLを新タブで開く。
+  async function shareViaNativeOrFallback({ text, url, fallbackUrl }) {
+    if (navigator.share) {
+      try {
+        await navigator.share({ text, url });
+        return;
+      } catch (e) {
+        // ユーザーがキャンセルしただけなら何もしない
+        if (e && e.name === 'AbortError') return;
+        // それ以外のエラー（共有失敗等）はフォールバックへ
+      }
+    }
+    window.open(fallbackUrl, '_blank', 'noopener,noreferrer');
+  }
+
+  // ハッシュタグ用に文字列を安全な形に変換（Twitterタグで使えない記号を除去）
+  function sanitizeHashtag(name) {
+    return (name || '').replace(/[^\p{L}\p{N}_]/gu, '');
+  }
+
+  // ① アプリ全体のシェア
+  function shareAppViaNativeOrX() {
+    const fallbackUrl =
+      `https://x.com/intent/post?text=${encodeURIComponent(APP_SHARE_TEXT)}` +
+      `&url=${encodeURIComponent(APP_URL)}&hashtags=${encodeURIComponent('シコログ')}`;
+    shareViaNativeOrFallback({
+      text: APP_SHARE_TEXT,
+      url: APP_URL,
+      fallbackUrl,
+    });
+  }
+
+  // ① アプリURLをクリップボードへコピー
+  async function copyAppShareToClipboard() {
+    const btn = document.getElementById('btn-share-copy');
+    const label = document.getElementById('share-copy-label');
+    const textToCopy = `${APP_SHARE_TEXT}\n${APP_URL}`;
+    let ok = false;
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(textToCopy);
+        ok = true;
+      } else {
+        const ta = document.createElement('textarea');
+        ta.value = textToCopy;
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        ok = document.execCommand('copy');
+        document.body.removeChild(ta);
+      }
+    } catch (e) {
+      ok = false;
+    }
+    if (ok) {
+      btn.classList.add('is-copied');
+      label.textContent = 'コピーしました！';
+      setTimeout(() => {
+        btn.classList.remove('is-copied');
+        label.textContent = 'URLをコピー';
+      }, 1800);
+    } else {
+      label.textContent = 'コピー失敗';
+      setTimeout(() => { label.textContent = 'URLをコピー'; }, 1800);
+    }
+  }
+
+  // ② 履歴の1レコードをシェア（女優FANZAアフィリリンク + シコログURLも本文に含めて誘導）
+  function shareRecord(record) {
     const who = (record.who || '').trim();
     const how = (record.how || '').trim();
 
     // 文面の組み立て（女優名には敬意を込めて「さん」付け）
-    let text;
+    let actionText;
     if (who && how) {
-      text = `${who}さんの${how}で賢者になりました`;
+      actionText = `${who}さんの${how}で賢者になりました`;
     } else if (who) {
-      text = `${who}さんで賢者になりました`;
+      actionText = `${who}さんで賢者になりました`;
     } else if (how) {
-      text = `${how}で賢者になりました`;
+      actionText = `${how}で賢者になりました`;
     } else {
-      text = '今日も賢者になりました';
+      actionText = '今日も賢者になりました';
     }
-    text += '\n— シコログで記録 📓';
+    // シコログURL を本文中にインライン。FANZAリンクは末尾（url パラメータ）に置くことで
+    // Twitterカードのプレビュー対象は FANZA 側のまま維持される。
+    const text = `${actionText}\n— シコログ📓 ${APP_URL}`;
 
-    // URL：女優名があれば女優検索、なければジャンル検索、それも無ければシコログ自身
-    let url;
+    // 末尾URL：女優名があればFANZA女優検索、なければジャンル検索、それも無ければシコログ
+    let endUrl;
     if (who) {
-      url = makeFanzaSearchUrl(who);
+      endUrl = makeFanzaSearchUrl(who);
     } else if (how) {
-      url = makeFanzaSearchUrl(how);
+      endUrl = makeFanzaSearchUrl(how);
     } else {
-      url = 'https://shicolog.vercel.app/';
+      endUrl = APP_URL;
     }
 
     // ハッシュタグ：シコログ + 女優名（あれば）
-    // ※ ハッシュタグに使えない記号類を除去
     const tags = ['シコログ'];
     if (who) {
-      const safe = who.replace(/[^\p{L}\p{N}_]/gu, '');
+      const safe = sanitizeHashtag(who);
       if (safe) tags.push(safe);
     }
+    const hashtagSuffix = tags.map((t) => `#${t}`).join(' ');
 
-    const intent = `https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}&hashtags=${encodeURIComponent(tags.join(','))}`;
-    window.open(intent, '_blank', 'noopener,noreferrer');
+    // Web Share API 用：text に本文＋ハッシュタグまで入れて渡す（一部アプリは hashtags 知らないため）
+    const nativeText = `${text}\n${hashtagSuffix}`;
+
+    // フォールバック（X intent）：text/url/hashtags を別パラメータで渡せるので明示的に分ける
+    const fallbackUrl =
+      `https://x.com/intent/post?text=${encodeURIComponent(text)}` +
+      `&url=${encodeURIComponent(endUrl)}` +
+      `&hashtags=${encodeURIComponent(tags.join(','))}`;
+
+    shareViaNativeOrFallback({
+      text: nativeText,
+      url: endUrl,
+      fallbackUrl,
+    });
   }
 
   function makeMetaField(labelText, value) {
@@ -1382,54 +1470,12 @@
       renderPendingWhoHint();
     });
 
-    // ===== シェア機能 =====
-    const SHARE_URL = 'https://shicolog.vercel.app/';
-    const SHARE_TEXT = 'あなたはどこまで賢者になれるのか？\nシコログ — 射精をこっそり記録するアプリ';
-
-    document.getElementById('btn-share-x').addEventListener('click', () => {
-      const url = `https://x.com/intent/post?text=${encodeURIComponent(SHARE_TEXT)}&url=${encodeURIComponent(SHARE_URL)}&hashtags=シコログ`;
-      window.open(url, '_blank', 'noopener,noreferrer');
+    // ===== アプリ全体のシェア =====
+    document.getElementById('btn-share-native').addEventListener('click', () => {
+      shareAppViaNativeOrX();
     });
-
-    document.getElementById('btn-share-line').addEventListener('click', () => {
-      const url = `https://social-plugins.line.me/lineit/share?url=${encodeURIComponent(SHARE_URL)}`;
-      window.open(url, '_blank', 'noopener,noreferrer');
-    });
-
-    document.getElementById('btn-share-copy').addEventListener('click', async () => {
-      const btn = document.getElementById('btn-share-copy');
-      const label = document.getElementById('share-copy-label');
-      const textToCopy = `${SHARE_TEXT}\n${SHARE_URL}`;
-      let ok = false;
-      try {
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          await navigator.clipboard.writeText(textToCopy);
-          ok = true;
-        } else {
-          // フォールバック：旧来の execCommand 方式
-          const ta = document.createElement('textarea');
-          ta.value = textToCopy;
-          ta.style.position = 'fixed';
-          ta.style.left = '-9999px';
-          document.body.appendChild(ta);
-          ta.select();
-          ok = document.execCommand('copy');
-          document.body.removeChild(ta);
-        }
-      } catch (e) {
-        ok = false;
-      }
-      if (ok) {
-        btn.classList.add('is-copied');
-        label.textContent = 'コピーしました！';
-        setTimeout(() => {
-          btn.classList.remove('is-copied');
-          label.textContent = 'URLをコピー';
-        }, 1800);
-      } else {
-        label.textContent = 'コピー失敗';
-        setTimeout(() => { label.textContent = 'URLをコピー'; }, 1800);
-      }
+    document.getElementById('btn-share-copy').addEventListener('click', () => {
+      copyAppShareToClipboard();
     });
 
     // テーマ切替

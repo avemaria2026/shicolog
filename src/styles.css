@@ -285,19 +285,19 @@ input {
 }
 .home-share__row {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 8px;
 }
 .share-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  padding: 10px 8px;
+  gap: 6px;
+  padding: 12px 10px;
   border-radius: 8px;
   border: 1px solid var(--border);
   background: var(--surface-alt, #fff);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
   color: var(--text);
   cursor: pointer;
@@ -307,15 +307,10 @@ input {
 .share-btn:active {
   transform: scale(0.96);
 }
-.share-btn--x {
-  background: #000;
+.share-btn--native {
+  background: var(--accent);
   color: #fff;
-  border-color: #000;
-}
-.share-btn--line {
-  background: #06c755;
-  color: #fff;
-  border-color: #06c755;
+  border-color: var(--accent);
 }
 .share-btn--copy.is-copied {
   background: #4caf50;
@@ -463,7 +458,7 @@ input {
   align-items: center;
   gap: 4px;
   padding: 6px 10px;
-  background: #000;
+  background: var(--accent);
   border: none;
   border-radius: 6px;
   color: #fff;
