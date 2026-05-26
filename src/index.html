@@ -29,41 +29,7 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <!-- ロック画面（PIN設定 or 入力） -->
-  <div id="lock-screen" class="lock" aria-hidden="true">
-    <div class="lock__panel">
-      <h1 id="lock-title" class="lock__title">ロックを解除</h1>
-      <p id="lock-message" class="lock__message">PINを入力してください</p>
-      <div id="pin-display" class="pin-display" aria-label="PIN入力">
-        <span class="pin-dot"></span>
-        <span class="pin-dot"></span>
-        <span class="pin-dot"></span>
-        <span class="pin-dot"></span>
-      </div>
-      <p id="lock-error" class="lock__error" aria-live="polite"></p>
-      <button id="btn-biometric-unlock" class="lock__biometric" type="button" hidden>
-        <span aria-hidden="true">🔓</span>
-        <span>指紋・顔認証で解除</span>
-      </button>
-      <div id="pin-keypad" class="pin-keypad">
-        <button class="pin-key" data-key="1" type="button">1</button>
-        <button class="pin-key" data-key="2" type="button">2</button>
-        <button class="pin-key" data-key="3" type="button">3</button>
-        <button class="pin-key" data-key="4" type="button">4</button>
-        <button class="pin-key" data-key="5" type="button">5</button>
-        <button class="pin-key" data-key="6" type="button">6</button>
-        <button class="pin-key" data-key="7" type="button">7</button>
-        <button class="pin-key" data-key="8" type="button">8</button>
-        <button class="pin-key" data-key="9" type="button">9</button>
-        <button class="pin-key pin-key--blank" type="button" disabled></button>
-        <button class="pin-key" data-key="0" type="button">0</button>
-        <button class="pin-key pin-key--del" data-key="del" type="button" aria-label="1文字削除">⌫</button>
-      </div>
-      <button id="btn-lock-cancel" class="lock__cancel" type="button" hidden>キャンセル</button>
-    </div>
-  </div>
-
-  <main id="app" class="app" aria-hidden="true">
+  <main id="app" class="app">
 
     <!-- ① ホーム画面 -->
     <section id="screen-home" class="screen screen--active">
@@ -245,21 +211,6 @@
           <span class="settings-item__hint">別端末のJSONを取り込む</span>
         </button>
         <input id="file-import-json" type="file" accept="application/json,.json" hidden>
-      </div>
-
-      <div class="settings-group">
-        <h2 class="settings-group__title">セキュリティ</h2>
-        <button id="btn-toggle-lock" class="settings-item" type="button">
-          <span id="lock-toggle-label" class="settings-item__label">PINロックを有効化</span>
-          <span id="lock-toggle-hint" class="settings-item__hint">現在：オフ（起動時の認証なし）。気になる方は4桁PINでロックできます</span>
-        </button>
-        <button id="btn-change-pin" class="settings-item" type="button" hidden>
-          <span class="settings-item__label">PINを変更</span>
-        </button>
-        <button id="btn-toggle-biometric" class="settings-item" type="button">
-          <span id="biometric-label" class="settings-item__label">生体認証を有効化</span>
-          <span id="biometric-hint" class="settings-item__hint">指紋・顔認証で素早く解除（PINロックが必要）</span>
-        </button>
       </div>
 
       <div class="settings-group">

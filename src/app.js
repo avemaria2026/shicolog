@@ -10,18 +10,19 @@
 
   // ===== 定数 =====
   const STORAGE_KEY = 'shicolog:records:v1';
-  const PIN_KEY = 'shicolog:pin:v1';
-  const BIOMETRIC_KEY = 'shicolog:biometric:v1';
-  const LOCK_DISABLED_KEY = 'shicolog:lock-disabled:v1';
   const THEME_KEY = 'shicolog:theme:v1';
   const FAVORITES_KEY = 'shicolog:favorites:v1';
+  // 旧バージョンで使っていたが現在は不要なlocalStorageキー（起動時にクリーンアップ）
+  const LEGACY_KEYS = [
+    'shicolog:pin:v1',
+    'shicolog:biometric:v1',
+    'shicolog:lock-disabled:v1',
+  ];
 
   // FANZA（DMMアフィリエイト）連携設定
   // アフィリエイトID承認後、ここを書き換えると全リンクが自動でアフィリエイトリンクに切り替わる
   const FANZA_AFFILIATE_ID = ''; // 例: 'shicolog-001'
   const FANZA_CHANNEL_ID = 'link';
-  const RELOCK_AFTER_MS = 30 * 1000; // バックグラウンド30秒以上で再ロック
-  const PIN_LENGTH = 4;
 
   // ===== ストレージ：記録 =====
   function loadRecords() {
@@ -77,38 +78,6 @@
   function clearAllRecords() {
     localStorage.removeItem(STORAGE_KEY);
     localStorage.removeItem(FAVORITES_KEY);
-  }
-
-  // ===== ストレージ：PIN =====
-  function loadPin() {
-    try {
-      const raw = localStorage.getItem(PIN_KEY);
-      return raw ? JSON.parse(raw) : null;
-    } catch (e) {
-      return null;
-    }
-  }
-
-  function savePin(salt, hash) {
-    localStorage.setItem(PIN_KEY, JSON.stringify({ salt, hash }));
-  }
-
-  // ===== 生体認証（WebAuthn） =====
-  function loadBiometric() {
-    try {
-      const raw = localStorage.getItem(BIOMETRIC_KEY);
-      return raw ? JSON.parse(raw) : null;
-    } catch (e) {
-      return null;
-    }
-  }
-
-  function saveBiometric(credentialId) {
-    localStorage.setItem(BIOMETRIC_KEY, JSON.stringify({ credentialId }));
-  }
-
-  function clearBiometric() {
-    localStorage.removeItem(BIOMETRIC_KEY);
   }
 
   // ===== ストレージ：お気に入り女優 =====
@@ -306,142 +275,6 @@
     if (meta) meta.setAttribute('content', isDark ? '#16181c' : '#3b6e8f');
   }
 
-  // ===== ロック有効/無効 =====
-  function isLockDisabled() {
-    return localStorage.getItem(LOCK_DISABLED_KEY) === 'true';
-  }
-
-  function setLockDisabled(disabled) {
-    if (disabled) {
-      localStorage.setItem(LOCK_DISABLED_KEY, 'true');
-    } else {
-      localStorage.removeItem(LOCK_DISABLED_KEY);
-    }
-  }
-
-  function isWebAuthnAvailable() {
-    return typeof window.PublicKeyCredential !== 'undefined' &&
-           typeof navigator.credentials !== 'undefined' &&
-           typeof navigator.credentials.create === 'function';
-  }
-
-  async function isPlatformAuthAvailable() {
-    if (!isWebAuthnAvailable()) return false;
-    try {
-      if (typeof PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable !== 'function') {
-        return false;
-      }
-      return await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
-    } catch (e) {
-      return false;
-    }
-  }
-
-  // ArrayBuffer ↔ base64url
-  function b64uEncode(buf) {
-    const bytes = new Uint8Array(buf);
-    let s = '';
-    for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
-    return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-  }
-  function b64uDecode(str) {
-    const pad = '='.repeat((4 - (str.length % 4)) % 4);
-    const s = atob(str.replace(/-/g, '+').replace(/_/g, '/') + pad);
-    const bytes = new Uint8Array(s.length);
-    for (let i = 0; i < s.length; i++) bytes[i] = s.charCodeAt(i);
-    return bytes.buffer;
-  }
-
-  async function registerBiometric() {
-    if (!isWebAuthnAvailable()) throw new Error('not-supported');
-    const challenge = crypto.getRandomValues(new Uint8Array(32));
-    const userId = crypto.getRandomValues(new Uint8Array(16));
-    const credential = await navigator.credentials.create({
-      publicKey: {
-        challenge,
-        rp: { name: 'counter', id: location.hostname },
-        user: {
-          id: userId,
-          name: 'counter-user',
-          displayName: 'counter user',
-        },
-        pubKeyCredParams: [
-          { type: 'public-key', alg: -7 },   // ES256
-          { type: 'public-key', alg: -257 }, // RS256
-        ],
-        authenticatorSelection: {
-          authenticatorAttachment: 'platform',
-          userVerification: 'required',
-          residentKey: 'preferred',
-        },
-        timeout: 60000,
-        attestation: 'none',
-      },
-    });
-    if (!credential) throw new Error('cancelled');
-    saveBiometric(b64uEncode(credential.rawId));
-  }
-
-  async function authenticateBiometric() {
-    const stored = loadBiometric();
-    if (!stored) throw new Error('not-registered');
-    if (!isWebAuthnAvailable()) throw new Error('not-supported');
-    const challenge = crypto.getRandomValues(new Uint8Array(32));
-    const assertion = await navigator.credentials.get({
-      publicKey: {
-        challenge,
-        rpId: location.hostname,
-        allowCredentials: [
-          { type: 'public-key', id: b64uDecode(stored.credentialId) },
-        ],
-        userVerification: 'required',
-        timeout: 60000,
-      },
-    });
-    if (!assertion) throw new Error('cancelled');
-    // ローカル完結なので署名検証は省略。生体認証通過＝同じ端末＝OKとみなす。
-    return true;
-  }
-
-  // ===== 暗号 =====
-  function generateSalt() {
-    const bytes = crypto.getRandomValues(new Uint8Array(16));
-    return Array.from(bytes).map((b) => b.toString(16).padStart(2, '0')).join('');
-  }
-
-  async function hashPin(pin, salt) {
-    // crypto.subtle はセキュアコンテキスト（http(s)/localhost）でのみ動く。
-    // ファイルダブルクリック起動（file://）のChrome等では使えないので簡易ハッシュへフォールバック。
-    if (typeof crypto !== 'undefined' && crypto.subtle && crypto.subtle.digest) {
-      try {
-        const enc = new TextEncoder();
-        const data = enc.encode(`${salt}:${pin}`);
-        const buf = await crypto.subtle.digest('SHA-256', data);
-        return 'sha256:' + Array.from(new Uint8Array(buf))
-          .map((b) => b.toString(16).padStart(2, '0'))
-          .join('');
-      } catch (e) {
-        // fall through
-      }
-    }
-    return 'fnv:' + simpleHash(`${salt}:${pin}`);
-  }
-
-  // FNV-1aを4本回した簡易128bit風ハッシュ。
-  // 目的は「LocalStorageに平文PINを置かない」程度。覗き見対策のレベル。
-  function simpleHash(str) {
-    let h1 = 0x811c9dc5, h2 = 0x01000193, h3 = 0xcbf29ce4, h4 = 0x84222325;
-    for (let i = 0; i < str.length; i++) {
-      const c = str.charCodeAt(i);
-      h1 = Math.imul(h1 ^ c, 16777619);
-      h2 = Math.imul(h2 ^ c, 16777619);
-      h3 = Math.imul(h3 ^ c, 16777619);
-      h4 = Math.imul(h4 ^ c, 16777619);
-    }
-    return [h1, h2, h3, h4]
-      .map((n) => (n >>> 0).toString(16).padStart(8, '0'))
-      .join('');
-  }
 
   // ===== 集計 =====
   function countThisMonth(records) {
@@ -869,8 +702,6 @@
     if (tabName === 'history') renderHistory();
     if (tabName === 'stats') renderStats();
     if (tabName === 'settings') {
-      refreshBiometricSetting();
-      refreshLockToggle();
       refreshThemeSelector();
     }
   }
@@ -978,60 +809,6 @@
       frag.appendChild(li);
     });
     el.appendChild(frag);
-  }
-
-  function refreshLockToggle() {
-    const label = document.getElementById('lock-toggle-label');
-    const hint = document.getElementById('lock-toggle-hint');
-    const changePinBtn = document.getElementById('btn-change-pin');
-    if (!label) return;
-    const hasPin = !!loadPin();
-    // PIN変更ボタンは PIN設定済みのときだけ表示
-    if (changePinBtn) changePinBtn.hidden = !hasPin;
-    if (!hasPin) {
-      label.textContent = 'PINロックを有効化';
-      hint.textContent = '現在：オフ（起動時の認証なし）。気になる方は4桁PINでロックできます';
-    } else if (isLockDisabled()) {
-      label.textContent = 'PINロックを有効化する';
-      hint.textContent = '現在：オフ（起動時の認証なし）';
-    } else {
-      label.textContent = 'PINロックを無効化する';
-      hint.textContent = '現在：オン（起動時にPIN/生体認証が必要）';
-    }
-  }
-
-  async function refreshBiometricSetting() {
-    const btn = document.getElementById('btn-toggle-biometric');
-    const label = document.getElementById('biometric-label');
-    const hint = document.getElementById('biometric-hint');
-    if (!btn) return;
-
-    const isEnabled = !!loadBiometric();
-    if (isEnabled) {
-      label.textContent = '生体認証を無効化';
-      hint.textContent = 'この端末で登録済み';
-      btn.disabled = false;
-      return;
-    }
-
-    // PIN未設定では生体認証は使えない（PINがフォールバックとして必要）
-    if (!loadPin()) {
-      label.textContent = '生体認証を有効化';
-      hint.textContent = '先にPINロックを有効化してください';
-      btn.disabled = true;
-      return;
-    }
-
-    const available = await isPlatformAuthAvailable();
-    if (!available) {
-      label.textContent = '生体認証は利用不可';
-      hint.textContent = 'この端末・ブラウザでは使えません';
-      btn.disabled = true;
-    } else {
-      label.textContent = '生体認証を有効化';
-      hint.textContent = '指紋・顔認証で素早く解除';
-      btn.disabled = false;
-    }
   }
 
   // ===== モーダル（新規入力／編集） =====
@@ -1443,275 +1220,11 @@
     return result;
   }
 
-  // ===== ロック =====
-  const Lock = {
-    el: null,
-    appEl: null,
-    titleEl: null,
-    messageEl: null,
-    errorEl: null,
-    dotsEl: null,
-    isUnlocked: false,
-    // ステートマシン:
-    // 'unlock'         : PINを入力して解除
-    // 'set-new'        : 新規PIN入力（初回または変更時）
-    // 'set-confirm'    : 新規PINの確認入力
-    // 'change-current' : PIN変更時の現PIN確認
-    state: null,
-    pinBuffer: '',
-    newPinDraft: '',
-    onUnlockSuccess: null,
 
-    init() {
-      this.el = document.getElementById('lock-screen');
-      this.appEl = document.getElementById('app');
-      this.titleEl = document.getElementById('lock-title');
-      this.messageEl = document.getElementById('lock-message');
-      this.errorEl = document.getElementById('lock-error');
-      this.dotsEl = document.getElementById('pin-display');
-      this.bioBtn = document.getElementById('btn-biometric-unlock');
-      this.cancelBtn = document.getElementById('btn-lock-cancel');
-    },
-
-    updateBiometricButton() {
-      // 'unlock' state でかつ生体登録済みのときだけボタンを出す
-      if (this.state === 'unlock' && loadBiometric()) {
-        this.bioBtn.hidden = false;
-      } else {
-        this.bioBtn.hidden = true;
-      }
-    },
-
-    async tryBiometric() {
-      if (this.state !== 'unlock') return;
-      if (!loadBiometric()) return;
-      try {
-        await authenticateBiometric();
-        this.isUnlocked = true;
-        this.hide();
-        if (typeof this.onUnlockSuccess === 'function') {
-          this.onUnlockSuccess();
-          this.onUnlockSuccess = null;
-        }
-      } catch (e) {
-        // 失敗・キャンセルはサイレント。PIN入力にフォールバック
-      }
-    },
-
-    show() {
-      this.el.classList.add('is-open');
-      this.el.setAttribute('aria-hidden', 'false');
-      this.appEl.setAttribute('aria-hidden', 'true');
-    },
-
-    hide() {
-      this.el.classList.remove('is-open');
-      this.el.setAttribute('aria-hidden', 'true');
-      this.appEl.setAttribute('aria-hidden', 'false');
-    },
-
-    setState(state) {
-      this.state = state;
-      this.pinBuffer = '';
-      this.errorEl.textContent = '';
-      this.updateDots();
-
-      switch (state) {
-        case 'unlock':
-          this.titleEl.textContent = 'ロックを解除';
-          this.messageEl.textContent = 'PINを入力してください';
-          break;
-        case 'set-new':
-          this.titleEl.textContent = 'PINを設定';
-          this.messageEl.textContent = '4桁の数字を入力してください';
-          break;
-        case 'set-confirm':
-          this.titleEl.textContent = 'もう一度入力';
-          this.messageEl.textContent = '確認のためもう一度入力';
-          break;
-        case 'change-current':
-          this.titleEl.textContent = '現在のPINを入力';
-          this.messageEl.textContent = 'PIN変更には現在のPINが必要です';
-          break;
-      }
-      this.updateBiometricButton();
-      this.updateCancelButton();
-    },
-
-    updateCancelButton() {
-      // unlock 状態（=起動時の認証）ではキャンセル不可。設定/変更フローのみ表示
-      if (!this.cancelBtn) return;
-      this.cancelBtn.hidden = (this.state === 'unlock');
-    },
-
-    // PIN設定/変更フローの中断
-    cancelChangePin() {
-      this.pinBuffer = '';
-      this.newPinDraft = '';
-      this.onUnlockSuccess = null;
-      const stored = loadPin();
-      // PIN未設定ならロック自体が無いので unlocked 扱い
-      this.isUnlocked = !stored || isLockDisabled();
-      this.hide();
-      switchTab('settings');
-    },
-
-    updateDots() {
-      const dots = this.dotsEl.querySelectorAll('.pin-dot');
-      dots.forEach((d, i) => {
-        d.classList.toggle('is-filled', i < this.pinBuffer.length);
-      });
-    },
-
-    shake() {
-      this.dotsEl.classList.add('is-shake');
-      setTimeout(() => this.dotsEl.classList.remove('is-shake'), 420);
-    },
-
-    async appendDigit(d) {
-      if (this.pinBuffer.length >= PIN_LENGTH) return;
-      this.pinBuffer += d;
-      this.errorEl.textContent = '';
-      this.updateDots();
-      if (this.pinBuffer.length === PIN_LENGTH) {
-        await this.handleComplete();
-      }
-    },
-
-    removeDigit() {
-      if (this.pinBuffer.length === 0) return;
-      this.pinBuffer = this.pinBuffer.slice(0, -1);
-      this.errorEl.textContent = '';
-      this.updateDots();
-    },
-
-    async handleComplete() {
-      const entered = this.pinBuffer;
-
-      if (this.state === 'unlock') {
-        const stored = loadPin();
-        if (!stored) {
-          // 想定外（PINがないのにunlock状態）→ 初期化へ
-          this.setState('set-new');
-          return;
-        }
-        const h = await hashPin(entered, stored.salt);
-        if (h === stored.hash) {
-          this.isUnlocked = true;
-          this.hide();
-          if (typeof this.onUnlockSuccess === 'function') {
-            this.onUnlockSuccess();
-            this.onUnlockSuccess = null;
-          }
-        } else {
-          this.shake();
-          this.pinBuffer = '';
-          this.updateDots();
-          this.errorEl.textContent = 'PINが違います';
-        }
-      } else if (this.state === 'set-new') {
-        this.newPinDraft = entered;
-        this.setState('set-confirm');
-      } else if (this.state === 'set-confirm') {
-        if (entered === this.newPinDraft) {
-          const salt = generateSalt();
-          const hash = await hashPin(entered, salt);
-          savePin(salt, hash);
-          this.newPinDraft = '';
-          this.isUnlocked = true;
-          this.hide();
-          if (typeof this.onUnlockSuccess === 'function') {
-            this.onUnlockSuccess();
-            this.onUnlockSuccess = null;
-          }
-        } else {
-          this.shake();
-          this.newPinDraft = '';
-          this.setState('set-new');
-          this.errorEl.textContent = '一致しません。もう一度設定してください';
-        }
-      } else if (this.state === 'change-current') {
-        const stored = loadPin();
-        if (!stored) {
-          this.setState('set-new');
-          return;
-        }
-        const h = await hashPin(entered, stored.salt);
-        if (h === stored.hash) {
-          this.setState('set-new');
-        } else {
-          this.shake();
-          this.pinBuffer = '';
-          this.updateDots();
-          this.errorEl.textContent = 'PINが違います';
-        }
-      }
-    },
-
-    // 起動時／再ロック時に呼ぶ。PIN未設定なら認証スキップして即アプリを開く。
-    requireAuth(onSuccess) {
-      this.onUnlockSuccess = onSuccess || null;
-      const stored = loadPin();
-
-      // PIN未設定、または PIN設定済み + ロック無効化中ならスキップして即解除
-      if (!stored || isLockDisabled()) {
-        this.isUnlocked = true;
-        // ロック画面を隠し、アプリ本体を表示状態にする
-        this.el.classList.remove('is-open');
-        this.el.setAttribute('aria-hidden', 'true');
-        this.appEl.setAttribute('aria-hidden', 'false');
-        if (typeof this.onUnlockSuccess === 'function') {
-          this.onUnlockSuccess();
-          this.onUnlockSuccess = null;
-        }
-        return;
-      }
-
-      this.show();
-      this.setState('unlock');
-      this.isUnlocked = false;
-      // 生体認証が登録済みなら自動で試す（失敗時はPIN入力にフォールバック）
-      if (loadBiometric()) {
-        setTimeout(() => this.tryBiometric(), 200);
-      }
-    },
-
-    // PIN設定/変更フロー開始。PIN未設定なら新規設定、設定済みなら変更フロー。
-    // onDone を渡すと完了後にそれが呼ばれる（未指定時はホームへ戻る）
-    startChangePin(onDone) {
-      const stored = loadPin();
-      this.show();
-      this.isUnlocked = false;
-      if (!stored) {
-        this.setState('set-new');
-      } else {
-        this.setState('change-current');
-      }
-      this.onUnlockSuccess = () => {
-        if (typeof onDone === 'function') {
-          onDone();
-        } else {
-          switchTab('home');
-        }
-      };
-    },
-  };
-
-  // ===== バックグラウンド復帰での再ロック =====
-  let hiddenAt = null;
-  function setupAutoLock() {
+  // ===== タブ復帰時にホームを再描画（FANZAから戻ったときの予約ヒント反映用） =====
+  function setupVisibilityHandler() {
     document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'hidden') {
-        hiddenAt = Date.now();
-      } else if (document.visibilityState === 'visible') {
-        if (hiddenAt && Lock.isUnlocked && !isLockDisabled()) {
-          const elapsed = Date.now() - hiddenAt;
-          if (elapsed > RELOCK_AFTER_MS) {
-            Lock.requireAuth();
-          }
-        }
-        hiddenAt = null;
-        // FANZAから戻ってきたタイミングでホーム表示を更新（予約ヒントが出るように）
+      if (document.visibilityState === 'visible') {
         if (document.getElementById('screen-home').classList.contains('screen--active')) {
           renderHome();
         }
@@ -1857,29 +1370,12 @@
         '本当に全データを削除しますか？\n記録もPIN設定も生体認証もすべて消えます。',
         () => {
           clearAllRecords();
-          localStorage.removeItem(PIN_KEY);
-          clearBiometric();
-          setLockDisabled(false);
           // 初回起動と同じ状態へ
           location.reload();
         },
         '削除'
       );
     });
-    document.getElementById('btn-change-pin').addEventListener('click', () => {
-      Lock.startChangePin(() => switchTab('settings'));
-    });
-
-    // 生体認証ボタン（ロック画面）
-    document.getElementById('btn-biometric-unlock').addEventListener('click', () => {
-      Lock.tryBiometric();
-    });
-
-    // ロック画面のキャンセル（PIN設定／変更フローのみ表示される）
-    document.getElementById('btn-lock-cancel').addEventListener('click', () => {
-      Lock.cancelChangePin();
-    });
-
     // 「予約中」ヒントの取り消し（ホーム画面）
     document.getElementById('btn-cancel-pending').addEventListener('click', () => {
       clearPendingWho();
@@ -1953,33 +1449,6 @@
       if (mq.addEventListener) mq.addEventListener('change', handler);
       else if (mq.addListener) mq.addListener(handler);
     }
-
-    // ロック有効/無効トグル
-    document.getElementById('btn-toggle-lock').addEventListener('click', () => {
-      const hasPin = !!loadPin();
-      if (!hasPin) {
-        // PIN未設定 → PIN設定フローへ。完了後は設定画面に戻りトグル表示を更新
-        Lock.startChangePin(() => {
-          setLockDisabled(false);
-          switchTab('settings');
-        });
-        return;
-      }
-      if (isLockDisabled()) {
-        // 再度有効化（警告不要）
-        setLockDisabled(false);
-        refreshLockToggle();
-      } else {
-        showConfirm(
-          'PINロックを無効化しますか？\n他人が端末を触ったときにデータが見えてしまいます。本当に無効化しますか？\n（PINはそのまま保存され、いつでも再有効化できます）',
-          () => {
-            setLockDisabled(true);
-            refreshLockToggle();
-          },
-          '無効化'
-        );
-      }
-    });
 
     // 引き継ぎコード：作る
     document.getElementById('btn-create-spell').addEventListener('click', async () => {
@@ -2108,75 +1577,26 @@
       );
     });
 
-    // 生体認証の有効化／無効化（設定画面）
-    document.getElementById('btn-toggle-biometric').addEventListener('click', async () => {
-      const btn = document.getElementById('btn-toggle-biometric');
-      const isEnabled = !!loadBiometric();
-      if (isEnabled) {
-        showConfirm('生体認証を無効化しますか？\n（PINでのロック解除はそのまま使えます）', () => {
-          clearBiometric();
-          refreshBiometricSetting();
-        }, '無効化');
-        return;
-      }
+  }
 
-      // 有効化フロー
-      const available = await isPlatformAuthAvailable();
-      if (!available) {
-        showConfirm('この端末では生体認証が利用できません。\n（生体センサーがない、またはOSの設定が必要です）', () => {}, '閉じる');
-        return;
-      }
-      btn.disabled = true;
-      try {
-        await registerBiometric();
-        refreshBiometricSetting();
-      } catch (e) {
-        showConfirm('生体認証の登録に失敗しました。\nキャンセル、またはOS側の設定で許可されていない可能性があります。', () => {}, '閉じる');
-      } finally {
-        btn.disabled = false;
-      }
-    });
-
-    // PINキーパッド
-    document.querySelectorAll('#pin-keypad .pin-key').forEach((key) => {
-      key.addEventListener('click', () => {
-        const k = key.dataset.key;
-        if (!k) return;
-        if (k === 'del') {
-          Lock.removeDigit();
-        } else {
-          Lock.appendDigit(k);
-        }
-      });
-    });
-
-    // 物理キーボードでも入力できるように（PC操作用）
-    document.addEventListener('keydown', (e) => {
-      if (!Lock.el.classList.contains('is-open')) return;
-      if (/^[0-9]$/.test(e.key)) {
-        Lock.appendDigit(e.key);
-      } else if (e.key === 'Backspace') {
-        Lock.removeDigit();
-      } else if (e.key === 'Escape' && Lock.state !== 'unlock') {
-        Lock.cancelChangePin();
-      }
+  // 旧バージョンで作られたPIN/生体認証/ロック設定の残骸をクリーンアップ
+  function cleanupLegacyStorage() {
+    LEGACY_KEYS.forEach((key) => {
+      try { localStorage.removeItem(key); } catch (e) {}
     });
   }
 
   // ===== 起動 =====
   function init() {
-    // テーマは最優先で適用（ロック画面より前に色が決まるように）
+    cleanupLegacyStorage();
     applyTheme(loadTheme());
 
     Modal.init();
-    Lock.init();
     bindEvents();
-    setupAutoLock();
+    setupVisibilityHandler();
     registerServiceWorker();
 
-    Lock.requireAuth(() => {
-      renderHome();
-    });
+    renderHome();
   }
 
   if (document.readyState === 'loading') {
