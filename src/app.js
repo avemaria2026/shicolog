@@ -713,7 +713,7 @@
     }
   }
 
-  // ② 履歴の1レコードを X でシェア（女優FANZAアフィリリンク + シコログURLも本文に含めて誘導）
+  // ② 履歴の1レコードを X でシェア（FANZAアフィリリンク + シコログURLも本文に含めて誘導）
   function shareRecord(record) {
     const who = (record.who || '').trim();
     const how = (record.how || '').trim();
@@ -729,18 +729,22 @@
     } else {
       actionText = '今日も賢者になりました';
     }
-    // シコログURL を本文中にインライン。FANZAリンクは末尾（url 引数）に置くことで
-    // Twitterカードのプレビュー対象は FANZA 側のまま維持される。
-    const text = `${actionText}\n— シコログ📓 ${APP_URL}`;
 
-    // 末尾URL：女優名があればFANZA女優検索、なければジャンル検索、それも無ければシコログ
-    let endUrl;
+    // FANZA URL：女優名があれば女優検索、なければジャンル検索、それも無ければ無し
+    let fanzaUrl = '';
     if (who) {
-      endUrl = makeFanzaSearchUrl(who);
+      fanzaUrl = makeFanzaSearchUrl(who);
     } else if (how) {
-      endUrl = makeFanzaSearchUrl(how);
+      fanzaUrl = makeFanzaSearchUrl(how);
+    }
+
+    // 本文：actionText → FANZA URL → シコログURL の順。Xは「最初に出てくるURL」を
+    // Twitterカードのプレビュー対象にするので、FANZAを先頭に置いてアフィリ側の表示優先を狙う。
+    let text;
+    if (fanzaUrl) {
+      text = `${actionText}\n${fanzaUrl}\n— シコログ📓 ${APP_URL}`;
     } else {
-      endUrl = APP_URL;
+      text = `${actionText}\n— シコログ📓 ${APP_URL}`;
     }
 
     // ハッシュタグ：シコログ + 女優名（あれば）
@@ -750,7 +754,9 @@
       if (safe) tags.push(safe);
     }
 
-    shareToX({ text, url: endUrl, hashtags: tags });
+    // url 引数は使わない（FANZA URLは既に本文先頭側に埋め込み済み。
+    // url 引数だと X が末尾に追加するためカード優先順位が逆転してしまう）
+    shareToX({ text, url: '', hashtags: tags });
   }
 
   function makeMetaField(labelText, value) {
@@ -922,15 +928,34 @@
       this.btnDelete = document.getElementById('btn-delete');
       this.btnSave = document.getElementById('btn-save');
       this.whoSuggestionsEl = document.getElementById('who-suggestions');
+
+      // 「誰で？」入力欄にタイプしたらサジェストを部分一致で絞り込む
+      this.inputWho.addEventListener('input', () => {
+        this.renderWhoSuggestions(this.inputWho.value);
+      });
     },
 
-    renderWhoSuggestions() {
+    // filter が空のときは「お気に入り + 履歴の使用頻度上位」を表示。
+    // filter が入力されているときは「お気に入り + 履歴 + BUNDLED_ACTRESSES」を部分一致で絞り込む。
+    renderWhoSuggestions(filter) {
       const el = this.whoSuggestionsEl;
       el.innerHTML = '';
-      // 履歴の使用頻度上位 + お気に入り（重複は除外）を候補に出す
+
       const favorites = loadFavorites();
-      const suggestions = getValueSuggestions('who', 8);
-      const merged = Array.from(new Set([...favorites, ...suggestions]));
+      const history = getValueSuggestions('who', 20);
+      const filterText = (filter || '').trim();
+
+      let merged;
+      if (filterText) {
+        // タイプ中：内蔵リストも含めて部分一致でサジェスト
+        const all = Array.from(new Set([...favorites, ...history, ...BUNDLED_ACTRESSES]));
+        merged = all
+          .filter((name) => name !== filterText && name.includes(filterText))
+          .slice(0, 10);
+      } else {
+        // 未入力時：お気に入り＋頻出のみ（内蔵リストは出さない＝ノイズ抑制）
+        merged = Array.from(new Set([...favorites, ...history.slice(0, 8)]));
+      }
       if (merged.length === 0) return;
       const frag = document.createDocumentFragment();
       merged.forEach((value) => {
