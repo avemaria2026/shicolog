@@ -307,10 +307,10 @@ input {
 .share-btn:active {
   transform: scale(0.96);
 }
-.share-btn--native {
-  background: var(--accent);
+.share-btn--x {
+  background: #000;
   color: #fff;
-  border-color: var(--accent);
+  border-color: #000;
 }
 .share-btn--copy.is-copied {
   background: #4caf50;
@@ -458,7 +458,7 @@ input {
   align-items: center;
   gap: 4px;
   padding: 6px 10px;
-  background: var(--accent);
+  background: #000;
   border: none;
   border-radius: 6px;
   color: #fff;

@@ -612,8 +612,8 @@
       const shareBtn = document.createElement('button');
       shareBtn.type = 'button';
       shareBtn.className = 'history-item__share';
-      shareBtn.setAttribute('aria-label', 'この記録をシェア');
-      shareBtn.innerHTML = '<span aria-hidden="true">📤</span><span>シェア</span>';
+      shareBtn.setAttribute('aria-label', 'この記録をXにポスト');
+      shareBtn.innerHTML = '<span aria-hidden="true">𝕏</span><span>ポスト</span>';
       shareBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         shareRecord(r);
@@ -630,20 +630,37 @@
   const APP_URL = 'https://shicolog.vercel.app/';
   const APP_SHARE_TEXT = 'あなたはどこまで賢者になれるのか？\nシコログ — 射精をこっそり記録するアプリ';
 
-  // Web Share API が使える環境ではネイティブ共有シート（X/LINE/Mail等のアプリが直接開く）。
-  // 使えない or キャンセル以外の失敗時は、第2引数のフォールバックURLを新タブで開く。
-  async function shareViaNativeOrFallback({ text, url, fallbackUrl }) {
-    if (navigator.share) {
-      try {
-        await navigator.share({ text, url });
-        return;
-      } catch (e) {
-        // ユーザーがキャンセルしただけなら何もしない
-        if (e && e.name === 'AbortError') return;
-        // それ以外のエラー（共有失敗等）はフォールバックへ
-      }
+  // モバイル判定（iPad は iPadOS 13+ で MacIntel を返すので別途検知）
+  function isMobileDevice() {
+    const ua = navigator.userAgent || '';
+    if (/iPhone|iPad|iPod|Android/i.test(ua)) return true;
+    if (navigator.platform === 'MacIntel' && (navigator.maxTouchPoints || 0) > 1) return true;
+    return false;
+  }
+
+  // X にダイレクト投稿。
+  // モバイル：twitter:// スキームでXアプリを直接起動（インストール済みなら共有シートを介さず1タップ）。
+  // デスクトップ：x.com/intent/post を新タブで開く。
+  function shareToX({ text, url, hashtags }) {
+    const tagList = hashtags || [];
+    if (isMobileDevice()) {
+      // Xアプリへ：message パラメータに全文を結合して渡す
+      const hashtagSuffix = tagList.map((t) => `#${t}`).join(' ');
+      const parts = [text];
+      if (url) parts.push(url);
+      if (hashtagSuffix) parts.push(hashtagSuffix);
+      const fullText = parts.join('\n');
+      // 現在のページのURLを書き換える形でスキーム起動。Xアプリ未インストール時は
+      // ブラウザがエラーを出すだけで、shicolog 自体のページ状態は保持される。
+      window.location.href = `twitter://post?message=${encodeURIComponent(fullText)}`;
+      return;
     }
-    window.open(fallbackUrl, '_blank', 'noopener,noreferrer');
+    // デスクトップ：Web Intent
+    const intent =
+      `https://x.com/intent/post?text=${encodeURIComponent(text)}` +
+      (url ? `&url=${encodeURIComponent(url)}` : '') +
+      (tagList.length ? `&hashtags=${encodeURIComponent(tagList.join(','))}` : '');
+    window.open(intent, '_blank', 'noopener,noreferrer');
   }
 
   // ハッシュタグ用に文字列を安全な形に変換（Twitterタグで使えない記号を除去）
@@ -651,15 +668,12 @@
     return (name || '').replace(/[^\p{L}\p{N}_]/gu, '');
   }
 
-  // ① アプリ全体のシェア
-  function shareAppViaNativeOrX() {
-    const fallbackUrl =
-      `https://x.com/intent/post?text=${encodeURIComponent(APP_SHARE_TEXT)}` +
-      `&url=${encodeURIComponent(APP_URL)}&hashtags=${encodeURIComponent('シコログ')}`;
-    shareViaNativeOrFallback({
+  // ① アプリ全体を X でシェア
+  function shareAppToX() {
+    shareToX({
       text: APP_SHARE_TEXT,
       url: APP_URL,
-      fallbackUrl,
+      hashtags: ['シコログ'],
     });
   }
 
@@ -699,7 +713,7 @@
     }
   }
 
-  // ② 履歴の1レコードをシェア（女優FANZAアフィリリンク + シコログURLも本文に含めて誘導）
+  // ② 履歴の1レコードを X でシェア（女優FANZAアフィリリンク + シコログURLも本文に含めて誘導）
   function shareRecord(record) {
     const who = (record.who || '').trim();
     const how = (record.how || '').trim();
@@ -715,7 +729,7 @@
     } else {
       actionText = '今日も賢者になりました';
     }
-    // シコログURL を本文中にインライン。FANZAリンクは末尾（url パラメータ）に置くことで
+    // シコログURL を本文中にインライン。FANZAリンクは末尾（url 引数）に置くことで
     // Twitterカードのプレビュー対象は FANZA 側のまま維持される。
     const text = `${actionText}\n— シコログ📓 ${APP_URL}`;
 
@@ -735,22 +749,8 @@
       const safe = sanitizeHashtag(who);
       if (safe) tags.push(safe);
     }
-    const hashtagSuffix = tags.map((t) => `#${t}`).join(' ');
 
-    // Web Share API 用：text に本文＋ハッシュタグまで入れて渡す（一部アプリは hashtags 知らないため）
-    const nativeText = `${text}\n${hashtagSuffix}`;
-
-    // フォールバック（X intent）：text/url/hashtags を別パラメータで渡せるので明示的に分ける
-    const fallbackUrl =
-      `https://x.com/intent/post?text=${encodeURIComponent(text)}` +
-      `&url=${encodeURIComponent(endUrl)}` +
-      `&hashtags=${encodeURIComponent(tags.join(','))}`;
-
-    shareViaNativeOrFallback({
-      text: nativeText,
-      url: endUrl,
-      fallbackUrl,
-    });
+    shareToX({ text, url: endUrl, hashtags: tags });
   }
 
   function makeMetaField(labelText, value) {
@@ -1471,8 +1471,8 @@
     });
 
     // ===== アプリ全体のシェア =====
-    document.getElementById('btn-share-native').addEventListener('click', () => {
-      shareAppViaNativeOrX();
+    document.getElementById('btn-share-x').addEventListener('click', () => {
+      shareAppToX();
     });
     document.getElementById('btn-share-copy').addEventListener('click', () => {
       copyAppShareToClipboard();
