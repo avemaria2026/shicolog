@@ -1504,12 +1504,22 @@
     let updated = 0;
     valid.forEach((r) => {
       if (map.has(r.id)) updated++; else added++;
-      map.set(r.id, {
+      const next = {
         id: r.id,
         datetime: r.datetime,
         who: typeof r.who === 'string' ? r.who : '',
         how: typeof r.how === 'string' ? r.how : '',
-      });
+      };
+      // work フィールドは構造を検証してから保存
+      if (r.work && typeof r.work === 'object' && r.work.cid && r.work.title) {
+        next.work = {
+          cid: String(r.work.cid),
+          title: String(r.work.title),
+          imageUrl: typeof r.work.imageUrl === 'string' ? r.work.imageUrl : '',
+          url: typeof r.work.url === 'string' ? r.work.url : '',
+        };
+      }
+      map.set(r.id, next);
     });
     const merged = Array.from(map.values());
     saveRecords(merged);
