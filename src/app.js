@@ -615,6 +615,45 @@
       dt.textContent = formatDateTime(r.datetime);
       li.appendChild(dt);
 
+      // 作品情報があれば最上段にサムネ＋タイトル表示
+      if (r.work && r.work.title) {
+        const workRow = document.createElement('div');
+        workRow.className = 'history-item__work';
+
+        const img = document.createElement('img');
+        img.className = 'history-item__work-image';
+        img.src = r.work.imageUrl || '';
+        img.alt = '';
+        img.onerror = () => {
+          img.style.background = 'linear-gradient(135deg, #ccc, #999)';
+          img.removeAttribute('src');
+        };
+        // 画像タップで FANZA 作品ページへ（イベント伝播止めて編集モーダル開かない）
+        img.style.cursor = 'pointer';
+        img.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (r.work.url) {
+            const wrapped = wrapFanzaAffiliate(r.work.url);
+            window.open(wrapped, '_blank', 'noopener,noreferrer');
+          }
+        });
+        workRow.appendChild(img);
+
+        const workBody = document.createElement('div');
+        workBody.className = 'history-item__work-body';
+        const workTitle = document.createElement('div');
+        workTitle.className = 'history-item__work-title';
+        workTitle.textContent = r.work.title;
+        workBody.appendChild(workTitle);
+        const workCid = document.createElement('div');
+        workCid.className = 'history-item__work-cid';
+        workCid.textContent = r.work.cid;
+        workBody.appendChild(workCid);
+        workRow.appendChild(workBody);
+
+        li.appendChild(workRow);
+      }
+
       const meta = document.createElement('div');
       meta.className = 'history-item__meta';
       meta.appendChild(makeMetaField('誰で', r.who));

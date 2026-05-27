@@ -1297,3 +1297,40 @@ input {
   cursor: pointer;
   padding: 0;
 }
+
+/* 履歴アイテム内の作品表示 */
+.history-item__work {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed var(--border);
+}
+.history-item__work-image {
+  width: 48px;
+  height: 48px;
+  object-fit: cover;
+  border-radius: 4px;
+  flex-shrink: 0;
+  background: #ddd;
+}
+.history-item__work-image:active {
+  opacity: 0.7;
+}
+.history-item__work-body {
+  flex: 1;
+  min-width: 0;
+}
+.history-item__work-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.history-item__work-cid {
+  font-size: 11px;
+  color: var(--text-sub);
+}
