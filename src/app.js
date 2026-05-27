@@ -1423,10 +1423,17 @@
     const records = loadRecords()
       .slice()
       .sort((a, b) => (a.datetime < b.datetime ? -1 : 1));
-    const header = ['id', 'datetime', 'who', 'how'];
+    const header = ['id', 'datetime', 'who', 'how', 'work_cid', 'work_title'];
     const lines = [header.join(',')];
     records.forEach((r) => {
-      lines.push([r.id, r.datetime, r.who, r.how].map(csvEscape).join(','));
+      lines.push([
+        r.id,
+        r.datetime,
+        r.who,
+        r.how,
+        csvEscape((r.work && r.work.cid) || ''),
+        csvEscape((r.work && r.work.title) || ''),
+      ].join(','));
     });
     const csv = lines.join('\r\n');
     const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
