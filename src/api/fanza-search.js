@@ -48,7 +48,11 @@ async function fetchItems(apiId, affiliateId, extraParams) {
     throw err;
   }
   const data = await res.json();
-  return (data && data.result && data.result.items) || [];
+  return {
+    items: (data && data.result && data.result.items) || [],
+    totalCount: (data && data.result && data.result.total_count) || 0,
+    resultCount: (data && data.result && data.result.result_count) || 0,
+  };
 }
 
 function mapItems(items) {
@@ -88,26 +92,28 @@ module.exports = async (req, res) => {
     }
 
     // 2) 女優IDが取れたら厳密に絞り込み、ダメならキーワード検索
-    let items;
+    let result;
     let mode;
     if (actressId) {
-      items = await fetchItems(apiId, affiliateId, {
+      result = await fetchItems(apiId, affiliateId, {
         article: 'actress',
         article_id: String(actressId),
       });
       mode = 'actress';
     } else {
-      items = await fetchItems(apiId, affiliateId, { keyword: name });
+      result = await fetchItems(apiId, affiliateId, { keyword: name });
       mode = 'keyword';
     }
 
-    const products = mapItems(items);
+    const products = mapItems(result.items);
 
     res.status(200).json({
       source: 'dmm',
       mode,
       query: name,
       actressId: actressId || null,
+      totalCount: result.totalCount,
+      resultCount: result.resultCount,
       products,
       count: products.length,
     });
