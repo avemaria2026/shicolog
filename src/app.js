@@ -20,8 +20,8 @@
   ];
 
   // FANZA（DMMアフィリエイト）連携設定
-  // アフィリエイトID承認後、ここを書き換えると全リンクが自動でアフィリエイトリンクに切り替わる
-  const FANZA_AFFILIATE_ID = ''; // 例: 'shicolog-001'
+  // 2026-05-27 DMMアフィリエイト承認！全FANZAリンクがアフィリラッパー(al.dmm.co.jp)経由になる
+  const FANZA_AFFILIATE_ID = 'vocchan-015';
   const FANZA_CHANNEL_ID = 'link';
 
   // ===== ストレージ：記録 =====
