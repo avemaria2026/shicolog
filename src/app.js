@@ -947,10 +947,29 @@
       this.btnSave = document.getElementById('btn-save');
       this.whoSuggestionsEl = document.getElementById('who-suggestions');
 
+      // 作品セクション要素
+      this.btnSearchWorks = document.getElementById('btn-search-works');
+      this.workStatusEl = document.getElementById('work-status');
+      this.workListEl = document.getElementById('work-list');
+      this.workSelectedEl = document.getElementById('work-selected');
+      this.workSelectedImage = document.getElementById('work-selected-image');
+      this.workSelectedTitle = document.getElementById('work-selected-title');
+      this.workSelectedCid = document.getElementById('work-selected-cid');
+      this.btnWorkClear = document.getElementById('btn-work-clear');
+
+      // 選択中の作品（保存時に使う）
+      this.selectedWork = null;
+
       // 「誰で？」入力欄にタイプしたらサジェストを部分一致で絞り込む
       this.inputWho.addEventListener('input', () => {
         this.renderWhoSuggestions(this.inputWho.value);
       });
+
+      // 「📥 この女優の作品を探す」クリック
+      this.btnSearchWorks.addEventListener('click', () => this.searchWorks());
+
+      // 「解除」クリック
+      this.btnWorkClear.addEventListener('click', () => this.clearWork());
     },
 
     // filter が空のときは「お気に入り + 履歴の使用頻度上位」を表示。
@@ -1012,9 +1031,126 @@
       el.appendChild(frag);
     },
 
+    async searchWorks() {
+      const actress = (this.inputWho.value || '').trim();
+      if (!actress) {
+        this.workStatusEl.textContent = '先に女優名を入力してください';
+        this.workStatusEl.className = 'work-status work-status--error';
+        this.workStatusEl.hidden = false;
+        this.workListEl.hidden = true;
+        return;
+      }
+
+      // ローディング表示
+      this.workStatusEl.textContent = `「${actress}」の作品を検索中…`;
+      this.workStatusEl.className = 'work-status';
+      this.workStatusEl.hidden = false;
+      this.workListEl.hidden = true;
+      this.btnSearchWorks.disabled = true;
+
+      try {
+        const url = `/api/fanza-search?actress=${encodeURIComponent(actress)}`;
+        const res = await fetch(url);
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}`);
+        }
+        const data = await res.json();
+        const products = Array.isArray(data.products) ? data.products : [];
+        this.renderWorks(products);
+      } catch (e) {
+        this.workStatusEl.textContent = `通信エラー：${e.message}`;
+        this.workStatusEl.className = 'work-status work-status--error';
+        this.workListEl.hidden = true;
+      } finally {
+        this.btnSearchWorks.disabled = false;
+      }
+    },
+
+    renderWorks(products) {
+      this.workListEl.innerHTML = '';
+      if (products.length === 0) {
+        this.workStatusEl.textContent = '作品が見つかりませんでした';
+        this.workStatusEl.className = 'work-status';
+        this.workStatusEl.hidden = false;
+        this.workListEl.hidden = true;
+        return;
+      }
+      this.workStatusEl.hidden = true;
+      this.workListEl.hidden = false;
+
+      const frag = document.createDocumentFragment();
+      products.forEach((p) => {
+        const li = document.createElement('li');
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'work-card';
+
+        const img = document.createElement('img');
+        img.className = 'work-card__image';
+        img.src = p.imageUrl || '';
+        img.alt = '';
+        // 画像読み込み失敗時のフォールバック
+        img.onerror = () => {
+          img.style.background = 'linear-gradient(135deg, #ccc, #999)';
+          img.removeAttribute('src');
+        };
+        btn.appendChild(img);
+
+        const body = document.createElement('div');
+        body.className = 'work-card__body';
+        const title = document.createElement('div');
+        title.className = 'work-card__title';
+        title.textContent = p.title;
+        body.appendChild(title);
+        const cid = document.createElement('div');
+        cid.className = 'work-card__cid';
+        cid.textContent = p.cid;
+        body.appendChild(cid);
+        btn.appendChild(body);
+
+        btn.addEventListener('click', () => this.selectWork(p));
+        li.appendChild(btn);
+        frag.appendChild(li);
+      });
+      this.workListEl.appendChild(frag);
+    },
+
+    selectWork(work) {
+      this.selectedWork = {
+        cid: work.cid,
+        title: work.title,
+        imageUrl: work.imageUrl || '',
+        url: work.url || '',
+      };
+      // リストを隠して選択カードを表示
+      this.workListEl.hidden = true;
+      this.workStatusEl.hidden = true;
+      this.btnSearchWorks.hidden = true;
+      this.workSelectedImage.src = work.imageUrl || '';
+      this.workSelectedImage.onerror = () => {
+        this.workSelectedImage.style.background = 'linear-gradient(135deg, #ccc, #999)';
+        this.workSelectedImage.removeAttribute('src');
+      };
+      this.workSelectedTitle.textContent = work.title;
+      this.workSelectedCid.textContent = work.cid;
+      this.workSelectedEl.hidden = false;
+    },
+
+    clearWork() {
+      this.selectedWork = null;
+      this.workSelectedEl.hidden = true;
+      this.btnSearchWorks.hidden = false;
+      this.workListEl.innerHTML = '';
+      this.workListEl.hidden = true;
+      this.workStatusEl.hidden = true;
+    },
+
     open(mode, record = null) {
       this.mode = mode;
       this.editingId = record ? record.id : null;
+
+      // 作品セクション初期化
+      this.clearWork();
 
       if (mode === 'create') {
         this.titleEl.textContent = '記録する';
@@ -1033,6 +1169,10 @@
         this.btnDelete.hidden = false;
         this.inputWho.value = record.who || '';
         this.inputHow.value = record.how || '';
+        // 既存記録に作品があれば選択状態で復元
+        if (record.work) {
+          this.selectWork(record.work);
+        }
       }
       this.syncChipSelection();
       this.renderWhoSuggestions();
@@ -1108,7 +1248,8 @@
     if (Modal.mode === 'create') {
       const who = skipMemo ? '' : Modal.inputWho.value;
       const how = skipMemo ? '' : Modal.inputHow.value;
-      addRecord({ who, how });
+      const work = skipMemo ? null : Modal.selectedWork;
+      addRecord({ who, how, work });
       clearPendingWho();
       Modal.close();
       renderHome();
@@ -1120,6 +1261,7 @@
       updateRecord(Modal.editingId, {
         who: Modal.inputWho.value,
         how: Modal.inputHow.value,
+        work: Modal.selectedWork,
       });
       Modal.close();
       renderHistory();
