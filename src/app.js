@@ -820,22 +820,23 @@
       actionText = '今日も賢者になりました';
     }
 
-    // 末尾URL選択優先度：work.url > 女優FANZA検索 > ジャンルFANZA検索 > シコログ
-    // 個別作品URLは og:image があるため Twitter カードに作品サムネが出る期待値が高い。
-    let endUrl;
+    // FANZA URL を本文の先頭側に置き、シコログ URL は後ろに置く。
+    // 作品URL（og:image あり）を先頭に出すと、X がそれをカードに使い作品サムネ付きで表示される。
+    // 検索URLしかない場合はカードが出ないが、その場合 X は次のURL（シコログ）をカードに使うので
+    // どちらに転んでも自然にフォールバックする。
+    let fanzaUrl = null;
     if (work && work.url) {
-      endUrl = wrapFanzaAffiliate(work.url);
+      fanzaUrl = wrapFanzaAffiliate(work.url);
     } else if (who) {
-      endUrl = makeFanzaSearchUrl(who);
+      fanzaUrl = makeFanzaSearchUrl(who);
     } else if (how) {
-      endUrl = makeFanzaSearchUrl(how);
-    } else {
-      endUrl = APP_URL;
+      fanzaUrl = makeFanzaSearchUrl(how);
     }
 
-    // 本文：シコログ URL を本文末尾、FANZA URL は url 引数で末尾に付与。
-    // 作品URLがある場合は Twitter カードに作品サムネが出る期待値が高い（仕様書 §9参照）。
-    const text = `${actionText}\n— シコログ📓 ${APP_URL}`;
+    const lines = [actionText];
+    if (fanzaUrl) lines.push(fanzaUrl);
+    lines.push(`— シコログ📓 ${APP_URL}`);
+    const text = lines.join('\n');
 
     // ハッシュタグ：シコログ + 女優名（あれば）
     const tags = ['シコログ'];
@@ -844,7 +845,8 @@
       if (safe) tags.push(safe);
     }
 
-    shareToX({ text, url: endUrl, hashtags: tags });
+    // URL は全部 text 内に埋め込んだので shareToX には渡さない（順序を完全に制御するため）
+    shareToX({ text, url: null, hashtags: tags });
   }
 
   function makeMetaField(labelText, value) {
