@@ -382,6 +382,31 @@
       .map(([name, count]) => ({ name, count }));
   }
 
+  // 作品（work）の通算ランキング集計
+  function aggregateWorkRanking(records, limit = 5) {
+    const map = new Map();
+    records.forEach((r) => {
+      if (!r.work || !r.work.cid) return;
+      const cid = r.work.cid;
+      const entry = map.get(cid) || {
+        cid,
+        title: r.work.title || '',
+        imageUrl: r.work.imageUrl || '',
+        url: r.work.url || '',
+        count: 0,
+      };
+      entry.count += 1;
+      // 最新の title / imageUrl で更新（同じcidで微妙にズレた場合の保険）
+      entry.title = r.work.title || entry.title;
+      entry.imageUrl = r.work.imageUrl || entry.imageUrl;
+      entry.url = r.work.url || entry.url;
+      map.set(cid, entry);
+    });
+    return Array.from(map.values())
+      .sort((a, b) => b.count - a.count)
+      .slice(0, limit);
+  }
+
   // 指定の who 名で最後に記録した日時を返す。なければ null。
   function getLastFapDate(name) {
     const n = (name || '').trim();
@@ -877,6 +902,66 @@
 
     renderRanking('stats-who-ranking', aggregateRanking(records, 'who', 5));
     renderRanking('stats-how-ranking', aggregateRanking(records, 'how', 5));
+    renderWorkRanking('stats-work-ranking', aggregateWorkRanking(records, 5));
+  }
+
+  function renderWorkRanking(elId, items) {
+    const el = document.getElementById(elId);
+    const emptyEl = document.getElementById('stats-work-empty');
+    if (!el) return;
+    el.innerHTML = '';
+    if (items.length === 0) {
+      if (emptyEl) emptyEl.hidden = false;
+      return;
+    }
+    if (emptyEl) emptyEl.hidden = true;
+
+    const frag = document.createDocumentFragment();
+    items.forEach((item, i) => {
+      const li = document.createElement('li');
+      li.className = 'work-ranking__item';
+
+      const rank = document.createElement('div');
+      rank.className = 'work-ranking__rank';
+      rank.textContent = `${i + 1}位`;
+      li.appendChild(rank);
+
+      const img = document.createElement('img');
+      img.className = 'work-ranking__image';
+      img.src = item.imageUrl || '';
+      img.alt = '';
+      img.onerror = () => {
+        img.style.background = 'linear-gradient(135deg, #ccc, #999)';
+        img.removeAttribute('src');
+      };
+      if (item.url) {
+        img.style.cursor = 'pointer';
+        img.addEventListener('click', () => {
+          window.open(wrapFanzaAffiliate(item.url), '_blank', 'noopener,noreferrer');
+        });
+      }
+      li.appendChild(img);
+
+      const body = document.createElement('div');
+      body.className = 'work-ranking__body';
+      const title = document.createElement('div');
+      title.className = 'work-ranking__title';
+      title.textContent = item.title;
+      body.appendChild(title);
+      const cid = document.createElement('div');
+      cid.className = 'work-ranking__cid';
+      cid.textContent = item.cid;
+      body.appendChild(cid);
+      li.appendChild(body);
+
+      const count = document.createElement('div');
+      count.className = 'work-ranking__count';
+      count.textContent = `${item.count}回`;
+      li.appendChild(count);
+
+      frag.appendChild(li);
+    });
+    el.appendChild(frag);
   }
 
   // FANZA各種リンクをホーム画面にセット
