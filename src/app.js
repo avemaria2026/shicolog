@@ -802,32 +802,39 @@
   function shareRecord(record) {
     const who = (record.who || '').trim();
     const how = (record.how || '').trim();
+    const work = record.work || null;
 
-    // 文面の組み立て（女優名には敬意を込めて「さん」付け）
+    // 文面の組み立て（女優名には「さん」付け、作品名は『 』で囲む）
     let actionText;
-    if (who && how) {
+    if (who && work && work.title) {
+      actionText = `${who}さんの『${work.title}』で賢者になりました`;
+    } else if (who && how) {
       actionText = `${who}さんの${how}で賢者になりました`;
     } else if (who) {
       actionText = `${who}さんで賢者になりました`;
+    } else if (work && work.title) {
+      actionText = `『${work.title}』で賢者になりました`;
     } else if (how) {
       actionText = `${how}で賢者になりました`;
     } else {
       actionText = '今日も賢者になりました';
     }
 
-    // FANZA URL：女優名があれば女優検索、なければジャンル検索、それも無ければシコログ自身
-    let fanzaUrl;
-    if (who) {
-      fanzaUrl = makeFanzaSearchUrl(who);
+    // 末尾URL選択優先度：work.url > 女優FANZA検索 > ジャンルFANZA検索 > シコログ
+    // 個別作品URLは og:image があるため Twitter カードに作品サムネが出る期待値が高い。
+    let endUrl;
+    if (work && work.url) {
+      endUrl = wrapFanzaAffiliate(work.url);
+    } else if (who) {
+      endUrl = makeFanzaSearchUrl(who);
     } else if (how) {
-      fanzaUrl = makeFanzaSearchUrl(how);
+      endUrl = makeFanzaSearchUrl(how);
     } else {
-      fanzaUrl = APP_URL;
+      endUrl = APP_URL;
     }
 
-    // 本文：シコログURL を先頭側に置いて Twitterカード をシコログ側で表示させる。
-    // 実測でFANZA検索URLには og:image / twitter:image メタが無くカードが出ないため、
-    // シコログのカード（OGP画像付き）を出した方が視覚的に拡散しやすい。
+    // 本文：シコログ URL を本文末尾、FANZA URL は url 引数で末尾に付与。
+    // 作品URLがある場合は Twitter カードに作品サムネが出る期待値が高い（仕様書 §9参照）。
     const text = `${actionText}\n— シコログ📓 ${APP_URL}`;
 
     // ハッシュタグ：シコログ + 女優名（あれば）
@@ -837,8 +844,7 @@
       if (safe) tags.push(safe);
     }
 
-    // FANZA URL は url 引数として末尾に。シコログが本文先頭で「最初のURL」になるためカード優先。
-    shareToX({ text, url: fanzaUrl, hashtags: tags });
+    shareToX({ text, url: endUrl, hashtags: tags });
   }
 
   function makeMetaField(labelText, value) {
