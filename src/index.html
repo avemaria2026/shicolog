@@ -288,6 +288,25 @@
         </div>
 
         <div class="field">
+          <span class="field__label">作品は？</span>
+          <div id="work-section" class="work-section">
+            <button id="btn-search-works" class="btn-work-search" type="button">
+              📥 この女優の作品を探す
+            </button>
+            <p id="work-status" class="work-status" hidden></p>
+            <ul id="work-list" class="work-list" hidden></ul>
+            <div id="work-selected" class="work-selected" hidden>
+              <img id="work-selected-image" class="work-selected__image" alt="">
+              <div class="work-selected__body">
+                <div id="work-selected-title" class="work-selected__title"></div>
+                <div id="work-selected-cid" class="work-selected__cid"></div>
+                <button id="btn-work-clear" class="work-selected__clear" type="button">解除</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="field">
           <span class="field__label">ジャンルは？</span>
           <div id="how-presets" class="chips">
             <button class="chip" data-preset="グラビア" type="button">グラビア</button>
