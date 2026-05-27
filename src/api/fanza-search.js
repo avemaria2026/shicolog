@@ -20,13 +20,13 @@ async function findActressId(apiId, affiliateId, name) {
     output: 'json',
   });
   const res = await fetch(`${ACTRESS_SEARCH_URL}?${params.toString()}`);
-  if (!res.ok) return null;
+  if (!res.ok) return { id: null, candidates: [] };
   const data = await res.json();
   const list = (data && data.result && data.result.actress) || [];
-  if (list.length === 0) return null;
-  // 完全一致を優先、なければ先頭（スコア最上位）
+  const candidates = list.map((a) => ({ id: a.id, name: a.name }));
+  if (list.length === 0) return { id: null, candidates };
   const exact = list.find((a) => a.name === name);
-  return (exact || list[0]).id || null;
+  return { id: (exact || list[0]).id || null, candidates };
 }
 
 async function fetchItems(apiId, affiliateId, extraParams) {
@@ -85,8 +85,11 @@ module.exports = async (req, res) => {
   try {
     // 1) 女優ID を引いてみる
     let actressId = null;
+    let candidates = [];
     try {
-      actressId = await findActressId(apiId, affiliateId, name);
+      const found = await findActressId(apiId, affiliateId, name);
+      actressId = found.id;
+      candidates = found.candidates;
     } catch (_) {
       // 女優検索失敗は致命傷ではない。下のキーワード検索にフォールバック。
     }
@@ -112,6 +115,7 @@ module.exports = async (req, res) => {
       mode,
       query: name,
       actressId: actressId || null,
+      candidates,
       totalCount: result.totalCount,
       resultCount: result.resultCount,
       products,
