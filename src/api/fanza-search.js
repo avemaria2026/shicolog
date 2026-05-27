@@ -107,6 +107,7 @@ module.exports = async (req, res) => {
       source: 'dmm',
       mode,
       query: name,
+      actressId: actressId || null,
       products,
       count: products.length,
     });
