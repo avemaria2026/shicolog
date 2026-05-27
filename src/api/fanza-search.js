@@ -40,12 +40,14 @@ module.exports = async (req, res) => {
     const data = await apiRes.json();
     const items = (data && data.result && data.result.items) || [];
 
+    // url は「生の商品ページURL」を返す。クライアント側で wrapFanzaAffiliate() が一回だけラップする。
+    // affiliateURL（DMMが既にラップ済みの al.fanza.co.jp 形式）を返すと、二重ラップで 400 Bad Request になる。
     const products = items.map((it) => ({
       cid: it.content_id,
       title: it.title,
       imageUrl:
         (it.imageURL && (it.imageURL.list || it.imageURL.small || it.imageURL.large)) || '',
-      url: it.affiliateURL || it.URL || '',
+      url: it.URL || '',
     }));
 
     res.status(200).json({

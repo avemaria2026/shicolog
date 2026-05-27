@@ -255,7 +255,10 @@
   }
 
   function wrapFanzaAffiliate(targetUrl) {
-    if (!FANZA_AFFILIATE_ID) return targetUrl;
+    if (!FANZA_AFFILIATE_ID || !targetUrl) return targetUrl;
+    // 既に al.fanza.co.jp / al.dmm.co.jp のアフィリエイトラッパー形式なら二重ラップせずそのまま返す。
+    // （フェーズB初期に保存された affiliateURL 付きの旧データを救済するため）
+    if (/^https?:\/\/al\.(fanza|dmm)\.co\.jp\//i.test(targetUrl)) return targetUrl;
     return `https://al.dmm.co.jp/?lurl=${encodeURIComponent(targetUrl)}&af_id=${encodeURIComponent(FANZA_AFFILIATE_ID)}&ch=link_tool&ch_id=${encodeURIComponent(FANZA_CHANNEL_ID)}`;
   }
 
