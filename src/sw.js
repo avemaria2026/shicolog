@@ -4,7 +4,7 @@
  * - データの送信は一切しない（同期・分析・外部API禁止）
  */
 
-const CACHE_VERSION = 'shicolog-v19-work-integration';
+const CACHE_VERSION = 'shicolog-v20-phase-b-real-api';
 const CACHE_NAME = `shicolog-${CACHE_VERSION}`;
 const PRECACHE = [
   './',
