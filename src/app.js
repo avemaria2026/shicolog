@@ -40,7 +40,7 @@
     localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
   }
 
-  function addRecord({ who, how }) {
+  function addRecord({ who, how, work }) {
     const records = loadRecords();
     const record = {
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -48,20 +48,41 @@
       who: (who || '').trim(),
       how: (how || '').trim(),
     };
+    // work はオプショナル。指定があれば cid/title/imageUrl/url を保存
+    if (work && work.cid && work.title) {
+      record.work = {
+        cid: work.cid,
+        title: work.title,
+        imageUrl: work.imageUrl || '',
+        url: work.url || '',
+      };
+    }
     records.push(record);
     saveRecords(records);
     return record;
   }
 
-  function updateRecord(id, { who, how }) {
+  function updateRecord(id, { who, how, work }) {
     const records = loadRecords();
     const idx = records.findIndex((r) => r.id === id);
     if (idx === -1) return false;
-    records[idx] = {
+    const updated = {
       ...records[idx],
       who: (who || '').trim(),
       how: (how || '').trim(),
     };
+    if (work && work.cid && work.title) {
+      updated.work = {
+        cid: work.cid,
+        title: work.title,
+        imageUrl: work.imageUrl || '',
+        url: work.url || '',
+      };
+    } else {
+      // 編集で work を解除した場合はフィールド削除
+      delete updated.work;
+    }
+    records[idx] = updated;
     saveRecords(records);
     return true;
   }
