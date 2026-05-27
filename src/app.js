@@ -730,22 +730,20 @@
       actionText = '今日も賢者になりました';
     }
 
-    // FANZA URL：女優名があれば女優検索、なければジャンル検索、それも無ければ無し
-    let fanzaUrl = '';
+    // FANZA URL：女優名があれば女優検索、なければジャンル検索、それも無ければシコログ自身
+    let fanzaUrl;
     if (who) {
       fanzaUrl = makeFanzaSearchUrl(who);
     } else if (how) {
       fanzaUrl = makeFanzaSearchUrl(how);
+    } else {
+      fanzaUrl = APP_URL;
     }
 
-    // 本文：actionText → FANZA URL → シコログURL の順。Xは「最初に出てくるURL」を
-    // Twitterカードのプレビュー対象にするので、FANZAを先頭に置いてアフィリ側の表示優先を狙う。
-    let text;
-    if (fanzaUrl) {
-      text = `${actionText}\n${fanzaUrl}\n— シコログ📓 ${APP_URL}`;
-    } else {
-      text = `${actionText}\n— シコログ📓 ${APP_URL}`;
-    }
+    // 本文：シコログURL を先頭側に置いて Twitterカード をシコログ側で表示させる。
+    // 実測でFANZA検索URLには og:image / twitter:image メタが無くカードが出ないため、
+    // シコログのカード（OGP画像付き）を出した方が視覚的に拡散しやすい。
+    const text = `${actionText}\n— シコログ📓 ${APP_URL}`;
 
     // ハッシュタグ：シコログ + 女優名（あれば）
     const tags = ['シコログ'];
@@ -754,9 +752,8 @@
       if (safe) tags.push(safe);
     }
 
-    // url 引数は使わない（FANZA URLは既に本文先頭側に埋め込み済み。
-    // url 引数だと X が末尾に追加するためカード優先順位が逆転してしまう）
-    shareToX({ text, url: '', hashtags: tags });
+    // FANZA URL は url 引数として末尾に。シコログが本文先頭で「最初のURL」になるためカード優先。
+    shareToX({ text, url: fanzaUrl, hashtags: tags });
   }
 
   function makeMetaField(labelText, value) {

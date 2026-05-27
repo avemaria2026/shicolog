@@ -4,7 +4,7 @@
  * - データの送信は一切しない（同期・分析・外部API禁止）
  */
 
-const CACHE_VERSION = 'shicolog-v17-affiliate-live';
+const CACHE_VERSION = 'shicolog-v18-ogp-card';
 const CACHE_NAME = `shicolog-${CACHE_VERSION}`;
 const PRECACHE = [
   './',
@@ -13,6 +13,7 @@ const PRECACHE = [
   './app.js',
   './manifest.json',
   './icon.svg',
+  './ogp.png',
   './privacy.html',
   './terms.html',
   './help.html',
