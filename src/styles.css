@@ -463,6 +463,34 @@ input {
   color: #fff;
   border-color: #4caf50;
 }
+.share-btn--monthly {
+  display: flex;
+  width: 100%;
+  margin-top: 8px;
+  background: linear-gradient(180deg, #fff8e6 0%, #f3e3bf 100%);
+  border-color: rgba(184, 153, 104, 0.7);
+  color: #6b4f2a;
+  font-weight: 700;
+}
+.share-btn--monthly:active {
+  background: #f3e3bf;
+}
+.share-btn--monthly:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+@media (prefers-color-scheme: dark) {
+  .share-btn--monthly {
+    background: linear-gradient(180deg, rgba(60,50,35,0.8) 0%, rgba(48,40,26,0.8) 100%);
+    color: #d4b889;
+    border-color: rgba(184, 153, 104, 0.5);
+  }
+}
+[data-theme="dark"] .share-btn--monthly {
+  background: linear-gradient(180deg, rgba(60,50,35,0.8) 0%, rgba(48,40,26,0.8) 100%);
+  color: #d4b889;
+  border-color: rgba(184, 153, 104, 0.5);
+}
 .home-favorites__empty {
   margin: 0;
   padding: 16px;

@@ -331,6 +331,37 @@
     }).length;
   }
 
+  // 今月の集計：合計回数、最頻出の女優、最頻出のジャンル を返す
+  function monthlyTally(records) {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = now.getMonth();
+    const monthRecords = records.filter((r) => {
+      const d = new Date(r.datetime);
+      return d.getFullYear() === y && d.getMonth() === m;
+    });
+    const whoMap = new Map();
+    const howMap = new Map();
+    monthRecords.forEach((r) => {
+      const who = (r.who || '').trim();
+      const how = (r.how || '').trim();
+      if (who) whoMap.set(who, (whoMap.get(who) || 0) + 1);
+      if (how) howMap.set(how, (howMap.get(how) || 0) + 1);
+    });
+    const topOf = (map) => {
+      let best = '';
+      let bestN = 0;
+      map.forEach((n, k) => { if (n > bestN) { bestN = n; best = k; } });
+      return best;
+    };
+    return {
+      month: m + 1,
+      count: monthRecords.length,
+      topActress: topOf(whoMap),
+      topGenre: topOf(howMap),
+    };
+  }
+
   function aggregateByMonth(records, monthsBack = 6) {
     const now = new Date();
     const buckets = [];
@@ -816,6 +847,32 @@
       url: APP_URL,
       hashtags: ['シコログ'],
     });
+  }
+
+  // ①' 今月の賢者度を X でシェア（記録があれば集計してカード化）
+  function shareMonthlyToX() {
+    const records = loadRecords();
+    const { month, count, topActress, topGenre } = monthlyTally(records);
+    if (count === 0) {
+      alert('今月はまだ記録がありません。＋1を押して記録してから試してね。');
+      return;
+    }
+    const sp = new URLSearchParams();
+    sp.set('monthly', '1');
+    sp.set('month', String(month));
+    sp.set('count', String(count));
+    if (topActress) sp.set('actress', topActress);
+    if (topGenre) sp.set('how', topGenre);
+    const shareUrl = `${APP_URL}share?${sp.toString()}`;
+
+    const lines = [`📊 ${month}月の賢者度：${count}回`];
+    if (topActress) lines.push(`主役：${topActress}`);
+    if (topGenre) lines.push(`ジャンル：${topGenre}`);
+    lines.push('');
+    lines.push(shareUrl);
+    const text = lines.join('\n');
+
+    shareToX({ text, url: null, hashtags: ['シコログ'] });
   }
 
   // ① アプリURLをクリップボードへコピー
@@ -1876,6 +1933,9 @@
     });
     document.getElementById('btn-share-copy').addEventListener('click', () => {
       copyAppShareToClipboard();
+    });
+    document.getElementById('btn-share-monthly').addEventListener('click', () => {
+      shareMonthlyToX();
     });
 
     // テーマ切替

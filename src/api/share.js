@@ -33,6 +33,9 @@ function isSafeRedirect(url) {
 
 module.exports = (req, res) => {
   const q = req.query || {};
+  const isMonthly = q.monthly === '1';
+  const month = Math.max(1, Math.min(12, parseInt(q.month, 10) || 0));
+  const count = Math.max(0, parseInt(q.count, 10) || 0);
   const actress = truncate(q.actress, 60);
   const work = truncate(q.work, 120);
   const how = truncate(q.how, 60);
@@ -42,6 +45,11 @@ module.exports = (req, res) => {
 
   // OG画像用クエリを組み立てる
   const ogParams = new URLSearchParams();
+  if (isMonthly) {
+    ogParams.set('monthly', '1');
+    if (month) ogParams.set('month', String(month));
+    if (count) ogParams.set('count', String(count));
+  }
   if (actress) ogParams.set('actress', actress);
   if (work) ogParams.set('work', work);
   if (how) ogParams.set('how', how);
@@ -49,7 +57,9 @@ module.exports = (req, res) => {
 
   // OGP用のタイトル・説明
   let title;
-  if (work) {
+  if (isMonthly) {
+    title = `📊 ${month}月の賢者度：${count}回`;
+  } else if (work) {
     title = `『${work}』で賢者になりました`;
   } else if (actress) {
     title = `${actress}さんで賢者になりました`;
@@ -60,13 +70,22 @@ module.exports = (req, res) => {
   }
   title = title + ' — シコログ';
 
-  const descParts = [];
-  if (actress) descParts.push(`女優：${actress}`);
-  if (how) descParts.push(`ジャンル：${how}`);
-  const description =
-    descParts.length > 0
-      ? descParts.join(' / ') + ' — あなたはどこまで賢者になれるのか？'
+  let description;
+  if (isMonthly) {
+    const parts = [];
+    if (actress) parts.push(`主役：${actress}`);
+    if (how) parts.push(`ジャンル：${how}`);
+    description = parts.length > 0
+      ? parts.join(' / ') + ' — あなたはどこまで賢者になれるのか？'
+      : 'シコログで今月の賢者度を集計しました。あなたはどこまで賢者になれるのか？';
+  } else {
+    const parts = [];
+    if (actress) parts.push(`女優：${actress}`);
+    if (how) parts.push(`ジャンル：${how}`);
+    description = parts.length > 0
+      ? parts.join(' / ') + ' — あなたはどこまで賢者になれるのか？'
       : 'シコログで賢者報告。あなたはどこまで賢者になれるのか？';
+  }
 
   const html = `<!DOCTYPE html>
 <html lang="ja">
