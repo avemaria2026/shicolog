@@ -1,0 +1,6 @@
+{
+  "rewrites": [
+    { "source": "/share", "destination": "/api/share" },
+    { "source": "/oracle/today", "destination": "/api/oracle-today" }
+  ]
+}

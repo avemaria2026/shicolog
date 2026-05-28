@@ -876,10 +876,7 @@
       actionText = '今日も賢者になりました';
     }
 
-    // FANZA URL を本文の先頭側に置き、シコログ URL は後ろに置く。
-    // 作品URL（og:image あり）を先頭に出すと、X がそれをカードに使い作品サムネ付きで表示される。
-    // 検索URLしかない場合はカードが出ないが、その場合 X は次のURL（シコログ）をカードに使うので
-    // どちらに転んでも自然にフォールバックする。
+    // リダイレクト先のFANZA URL を組み立てる
     let fanzaUrl = null;
     if (work && work.url) {
       fanzaUrl = wrapFanzaAffiliate(work.url);
@@ -889,10 +886,23 @@
       fanzaUrl = makeFanzaSearchUrl(how);
     }
 
-    const lines = [actionText];
-    if (fanzaUrl) lines.push(fanzaUrl);
-    lines.push(`— シコログ📓 ${APP_URL}`);
-    const text = lines.join('\n');
+    // シェア用URL：シコログ側 /share を経由させる。
+    // - X が OGP を取りに来た時、シコログ謹製のブランド画像がカードに乗る
+    // - 実ユーザーが踏んだ時は /share が即 FANZA URL にリダイレクトする
+    // - 作品/女優/ジャンルがすべて空の時はホームURLにフォールバック
+    let shareLandingUrl;
+    if (who || how || (work && work.title)) {
+      const sp = new URLSearchParams();
+      if (who) sp.set('actress', who);
+      if (work && work.title) sp.set('work', work.title);
+      if (how) sp.set('how', how);
+      if (fanzaUrl) sp.set('url', fanzaUrl);
+      shareLandingUrl = `${APP_URL}share?${sp.toString()}`;
+    } else {
+      shareLandingUrl = APP_URL;
+    }
+
+    const text = `${actionText}\n${shareLandingUrl}`;
 
     // ハッシュタグ：シコログ + 女優名（あれば）
     const tags = ['シコログ'];
