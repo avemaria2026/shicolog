@@ -5,11 +5,20 @@
 // 流れ：
 //   1) 女優検索API で女優名 → actress_id を引く
 //   2) 商品検索API に article=actress&article_id=<id>&sort=date を渡し、
-//      その女優の作品だけを発売日順で取得
-//   3) 女優が見つからない場合はキーワード検索にフォールバック
+//      その女優の作品だけを発売日順で取得（多めに30件）
+//   3) 取得結果からBEST編/総集編をフィルタ、最大10件まで返す
+//   4) フィルタで全部弾かれた場合は元の結果をそのまま返す（無音回避）
+//   5) 女優が見つからない場合はキーワード検索にフォールバック
 
 const ACTRESS_SEARCH_URL = 'https://api.dmm.com/affiliate/v3/ActressSearch';
 const ITEM_LIST_URL = 'https://api.dmm.com/affiliate/v3/ItemList';
+
+// 単発作品を優先するため、明らかなBEST編/総集編タイトルを弾くパターン
+const COMPILATION_PATTERN = /(BEST|ベスト|総集編|傑作選|コレクション|\d+時間|全\d+本|大全集)/i;
+
+function isCompilation(title) {
+  return COMPILATION_PATTERN.test(title || '');
+}
 
 async function findActressId(apiId, affiliateId, name) {
   const params = new URLSearchParams({
@@ -20,13 +29,12 @@ async function findActressId(apiId, affiliateId, name) {
     output: 'json',
   });
   const res = await fetch(`${ACTRESS_SEARCH_URL}?${params.toString()}`);
-  if (!res.ok) return { id: null, candidates: [] };
+  if (!res.ok) return null;
   const data = await res.json();
   const list = (data && data.result && data.result.actress) || [];
-  const candidates = list.map((a) => ({ id: a.id, name: a.name }));
-  if (list.length === 0) return { id: null, candidates };
+  if (list.length === 0) return null;
   const exact = list.find((a) => a.name === name);
-  return { id: (exact || list[0]).id || null, candidates };
+  return (exact || list[0]).id || null;
 }
 
 async function fetchItems(apiId, affiliateId, extraParams) {
@@ -36,7 +44,7 @@ async function fetchItems(apiId, affiliateId, extraParams) {
     site: 'FANZA',
     service: 'digital',
     floor: 'videoa',
-    hits: '10',
+    hits: '30',
     sort: 'date',
     output: 'json',
     ...extraParams,
@@ -48,11 +56,7 @@ async function fetchItems(apiId, affiliateId, extraParams) {
     throw err;
   }
   const data = await res.json();
-  return {
-    items: (data && data.result && data.result.items) || [],
-    totalCount: (data && data.result && data.result.total_count) || 0,
-    resultCount: (data && data.result && data.result.result_count) || 0,
-  };
+  return (data && data.result && data.result.items) || [];
 }
 
 function mapItems(items) {
@@ -83,41 +87,35 @@ module.exports = async (req, res) => {
   const name = actress.trim();
 
   try {
-    // 1) 女優ID を引いてみる
+    // 1) 女優ID を引いてみる（失敗してもキーワード検索にフォールバックするので致命傷ではない）
     let actressId = null;
-    let candidates = [];
     try {
-      const found = await findActressId(apiId, affiliateId, name);
-      actressId = found.id;
-      candidates = found.candidates;
-    } catch (_) {
-      // 女優検索失敗は致命傷ではない。下のキーワード検索にフォールバック。
-    }
+      actressId = await findActressId(apiId, affiliateId, name);
+    } catch (_) {}
 
     // 2) 女優IDが取れたら厳密に絞り込み、ダメならキーワード検索
-    let result;
+    let items;
     let mode;
     if (actressId) {
-      result = await fetchItems(apiId, affiliateId, {
+      items = await fetchItems(apiId, affiliateId, {
         article: 'actress',
         article_id: String(actressId),
       });
       mode = 'actress';
     } else {
-      result = await fetchItems(apiId, affiliateId, { keyword: name });
+      items = await fetchItems(apiId, affiliateId, { keyword: name });
       mode = 'keyword';
     }
 
-    const products = mapItems(result.items);
+    // 3) BEST編/総集編を弾く。全部弾かれたら元のリストをそのまま使う（空回避）
+    const filtered = items.filter((it) => !isCompilation(it.title));
+    const pool = filtered.length > 0 ? filtered : items;
+    const products = mapItems(pool.slice(0, 10));
 
     res.status(200).json({
       source: 'dmm',
       mode,
       query: name,
-      actressId: actressId || null,
-      candidates,
-      totalCount: result.totalCount,
-      resultCount: result.resultCount,
       products,
       count: products.length,
     });
