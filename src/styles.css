@@ -276,11 +276,45 @@ input {
 .home-oracle::after  { bottom: 5px; }
 .home-oracle__title {
   margin: 0 0 10px;
+  padding: 0 36px; /* 右上のサイコロボタンと被らないようにする */
   font-size: 14px;
   font-weight: 700;
   color: #6b4f2a;
   text-align: center;
   letter-spacing: 0.08em;
+}
+.home-oracle__reroll {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 1;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 250, 235, 0.95);
+  border: 1px solid rgba(184, 153, 104, 0.7);
+  border-radius: 50%;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  transition: transform 0.12s ease, background 0.15s;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+.home-oracle__reroll:active {
+  transform: scale(0.9);
+  background: rgba(255, 240, 200, 1);
+}
+.home-oracle__reroll:disabled {
+  cursor: progress;
+}
+.home-oracle__reroll.is-loading > span {
+  display: inline-block;
+  animation: oracle-spin 0.7s linear infinite;
+}
+@keyframes oracle-spin {
+  to { transform: rotate(360deg); }
 }
 .home-oracle__card {
   display: flex;
@@ -345,6 +379,22 @@ input {
 [data-theme="dark"] .home-oracle__title { color: #d4b889; }
 [data-theme="dark"] .home-oracle__product-title { color: #ebdcc0; }
 [data-theme="dark"] .home-oracle__hint { color: #b89968; }
+@media (prefers-color-scheme: dark) {
+  .home-oracle__reroll {
+    background: rgba(60, 50, 35, 0.9);
+    border-color: rgba(184, 153, 104, 0.6);
+  }
+  .home-oracle__reroll:active {
+    background: rgba(80, 65, 45, 1);
+  }
+}
+[data-theme="dark"] .home-oracle__reroll {
+  background: rgba(60, 50, 35, 0.9);
+  border-color: rgba(184, 153, 104, 0.6);
+}
+[data-theme="dark"] .home-oracle__reroll:active {
+  background: rgba(80, 65, 45, 1);
+}
 
 /* ===== ホーム画面：FANZAから探す ===== */
 .home-fanza {

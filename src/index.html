@@ -60,9 +60,12 @@
         </div>
       </div>
 
-      <!-- 今日の悟りの書（FANZAランダム1件、毎リロード更新） -->
+      <!-- 悟りの書を探す（FANZAランダム1件、🎲で再抽選） -->
       <aside id="home-oracle" class="home-oracle" hidden>
-        <h2 class="home-oracle__title">📜 今日の悟りの書</h2>
+        <h2 class="home-oracle__title">📜 悟りの書を探す</h2>
+        <button id="btn-oracle-reroll" class="home-oracle__reroll" type="button" aria-label="別の作品を引き直す">
+          <span aria-hidden="true">🎲</span>
+        </button>
         <a id="home-oracle-link" class="home-oracle__card" href="#" target="_blank" rel="noopener noreferrer">
           <img id="home-oracle-image" class="home-oracle__image" alt="" loading="lazy">
           <div class="home-oracle__body">

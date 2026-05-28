@@ -482,15 +482,24 @@
     renderHomeFavorites();
     renderPendingWhoHint();
     renderFanzaLinks();
-    loadOracle();
   }
 
-  // ===== 今日の悟りの書（FANZAランダム1件） =====
+  // ===== 悟りの書を探す（FANZAランダム1件） =====
   // /api/fanza-random から1作品取得して、トップ画面のウィジェットに表示する。
-  // 失敗・未設定時はウィジェットごと非表示にする（エラーは出さない）。
+  // 初回ロードと、サイコロボタン押下時の両方から呼ばれる。
+  // 初回失敗時はウィジェットごと非表示。再抽選中の失敗は既存表示を維持する。
   function loadOracle() {
     const root = document.getElementById('home-oracle');
+    const rerollBtn = document.getElementById('btn-oracle-reroll');
     if (!root) return;
+    if (rerollBtn && rerollBtn.disabled) return; // 連打防止
+    const wasVisible = !root.hidden;
+
+    if (rerollBtn) {
+      rerollBtn.disabled = true;
+      rerollBtn.classList.add('is-loading');
+    }
+
     fetch('/api/fanza-random')
       .then((res) => {
         if (!res.ok) return null;
@@ -500,7 +509,7 @@
       .then((data) => {
         const product = data && data.product;
         if (!product || !product.url || !product.imageUrl) {
-          root.hidden = true;
+          if (!wasVisible) root.hidden = true;
           return;
         }
         const linkEl = document.getElementById('home-oracle-link');
@@ -513,8 +522,19 @@
         root.hidden = false;
       })
       .catch(() => {
-        root.hidden = true;
+        if (!wasVisible) root.hidden = true;
+      })
+      .finally(() => {
+        if (rerollBtn) {
+          rerollBtn.disabled = false;
+          rerollBtn.classList.remove('is-loading');
+        }
       });
+  }
+
+  function bindOracle() {
+    const rerollBtn = document.getElementById('btn-oracle-reroll');
+    if (rerollBtn) rerollBtn.addEventListener('click', loadOracle);
   }
 
   function renderHomeFavorites() {
@@ -2009,10 +2029,12 @@
 
     Modal.init();
     bindEvents();
+    bindOracle();
     setupVisibilityHandler();
     registerServiceWorker();
 
     renderHome();
+    loadOracle();
   }
 
   if (document.readyState === 'loading') {
