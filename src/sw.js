@@ -4,7 +4,7 @@
  * - データの送信は一切しない（同期・分析・外部API禁止）
  */
 
-const CACHE_VERSION = 'shicolog-v25-oracle-reroll';
+const CACHE_VERSION = 'shicolog-v26-api-bypass';
 const CACHE_NAME = `shicolog-${CACHE_VERSION}`;
 const PRECACHE = [
   './',
@@ -47,6 +47,10 @@ self.addEventListener('fetch', (event) => {
   // 自身のオリジン以外はキャッシュしない（外部リクエストは作らない方針）
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
+
+  // /api/* は動的レスポンス（毎回違う値が返るFANZAランダム等）なので
+  // キャッシュ介入せずブラウザのネットワーク処理に任せる。
+  if (url.pathname.startsWith('/api/')) return;
 
   event.respondWith(
     caches.match(req).then((cached) => {
