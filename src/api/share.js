@@ -43,17 +43,10 @@ module.exports = (req, res) => {
 
   const redirectUrl = isSafeRedirect(rawUrl) ? rawUrl : APP_ORIGIN + '/';
 
-  // OG画像用クエリを組み立てる
-  const ogParams = new URLSearchParams();
-  if (isMonthly) {
-    ogParams.set('monthly', '1');
-    if (month) ogParams.set('month', String(month));
-    if (count) ogParams.set('count', String(count));
-  }
-  if (actress) ogParams.set('actress', actress);
-  if (work) ogParams.set('work', work);
-  if (how) ogParams.set('how', how);
-  const ogImageUrl = `${APP_ORIGIN}/api/og?${ogParams.toString()}`;
+  // OG画像：当面は静的なシコログOGP画像を使う。
+  // 動的生成（/api/og）はフォント読み込みの問題で詰まっているため、後日リベンジ。
+  // 静的でも「シコログのブランド画像が乗ったカード」体験は確保できる。
+  const ogImageUrl = `${APP_ORIGIN}/ogp.png`;
 
   // OGP用のタイトル・説明
   let title;
