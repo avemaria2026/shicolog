@@ -9,6 +9,7 @@
 // .mjs 拡張子なので ESM で書ける。Vercel は @vercel/og + edge runtime を
 // このまま処理する。
 
+import React from 'react';
 import { ImageResponse } from '@vercel/og';
 
 export const config = { runtime: 'edge' };
@@ -23,9 +24,9 @@ function truncate(s, n) {
   return s.length <= n ? s : s.slice(0, n - 1) + '…';
 }
 
-// satoriが受け取るReact要素相当のJSONを組み立てるヘルパー
+// React.createElement の薄いラッパー（JSX非依存・style+childrenだけ受ける）
 function el(type, style, children) {
-  return { type, props: { style, children } };
+  return React.createElement(type, { style }, children);
 }
 
 function buildRecordTree({ actress, work, how }) {
