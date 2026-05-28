@@ -4,7 +4,7 @@
  * - データの送信は一切しない（同期・分析・外部API禁止）
  */
 
-const CACHE_VERSION = 'shicolog-v23-actress-filter';
+const CACHE_VERSION = 'shicolog-v24-oracle-widget';
 const CACHE_NAME = `shicolog-${CACHE_VERSION}`;
 const PRECACHE = [
   './',

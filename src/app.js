@@ -482,6 +482,39 @@
     renderHomeFavorites();
     renderPendingWhoHint();
     renderFanzaLinks();
+    loadOracle();
+  }
+
+  // ===== 今日の悟りの書（FANZAランダム1件） =====
+  // /api/fanza-random から1作品取得して、トップ画面のウィジェットに表示する。
+  // 失敗・未設定時はウィジェットごと非表示にする（エラーは出さない）。
+  function loadOracle() {
+    const root = document.getElementById('home-oracle');
+    if (!root) return;
+    fetch('/api/fanza-random')
+      .then((res) => {
+        if (!res.ok) return null;
+        if (res.status === 204) return null;
+        return res.json();
+      })
+      .then((data) => {
+        const product = data && data.product;
+        if (!product || !product.url || !product.imageUrl) {
+          root.hidden = true;
+          return;
+        }
+        const linkEl = document.getElementById('home-oracle-link');
+        const imgEl = document.getElementById('home-oracle-image');
+        const titleEl = document.getElementById('home-oracle-product-title');
+        linkEl.href = wrapFanzaAffiliate(product.url);
+        imgEl.src = product.imageUrl;
+        imgEl.alt = product.title || '';
+        titleEl.textContent = product.title || '';
+        root.hidden = false;
+      })
+      .catch(() => {
+        root.hidden = true;
+      });
   }
 
   function renderHomeFavorites() {
