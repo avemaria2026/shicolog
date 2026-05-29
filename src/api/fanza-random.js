@@ -12,6 +12,16 @@ function isCompilation(title) {
   return COMPILATION_PATTERN.test(title || '');
 }
 
+// 未発売（予約商品）を弾く。FANZA APIの date は "YYYY-MM-DD HH:MM:SS" JST。
+// 日付パース失敗時は除外しない（安全側）。
+function isReleased(item) {
+  const d = item && item.date;
+  if (!d) return true;
+  const ts = Date.parse(String(d).replace(' ', 'T') + '+09:00');
+  if (Number.isNaN(ts)) return true;
+  return ts <= Date.now();
+}
+
 async function fetchItems(apiId, affiliateId, offset) {
   const params = new URLSearchParams({
     api_id: apiId,
@@ -45,8 +55,10 @@ module.exports = async (req, res) => {
     // 人気上位の中からランダムなオフセット位置を取る（毎リロード違う作品が出るように）
     const offset = Math.floor(Math.random() * 480) + 1; // 1..480
     const items = await fetchItems(apiId, affiliateId, offset);
-    const filtered = items.filter((it) => !isCompilation(it.title));
-    const pool = filtered.length > 0 ? filtered : items;
+    const released = items.filter((it) => isReleased(it));
+    const filtered = released.filter((it) => !isCompilation(it.title));
+    // 未発売を除外した時点で0件なら、最終フォールバックとして元のリストを使う
+    const pool = filtered.length > 0 ? filtered : (released.length > 0 ? released : items);
     if (pool.length === 0) {
       return res.status(204).end();
     }

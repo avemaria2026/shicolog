@@ -20,6 +20,16 @@ function isCompilation(title) {
   return COMPILATION_PATTERN.test(title || '');
 }
 
+// 未発売（予約商品）を弾く。FANZA APIの date は "YYYY-MM-DD HH:MM:SS" JST。
+// 日付パース失敗時は除外しない（安全側）。
+function isReleased(item) {
+  const d = item && item.date;
+  if (!d) return true;
+  const ts = Date.parse(String(d).replace(' ', 'T') + '+09:00');
+  if (Number.isNaN(ts)) return true;
+  return ts <= Date.now();
+}
+
 async function findActressId(apiId, affiliateId, name) {
   const params = new URLSearchParams({
     api_id: apiId,
@@ -107,9 +117,11 @@ module.exports = async (req, res) => {
       mode = 'keyword';
     }
 
-    // 3) BEST編/総集編を弾く。全部弾かれたら元のリストをそのまま使う（空回避）
-    const filtered = items.filter((it) => !isCompilation(it.title));
-    const pool = filtered.length > 0 ? filtered : items;
+    // 3) 未発売（予約商品）を先に弾き、その後 BEST編/総集編を弾く。
+    //    フォールバック：単発フィルタ→発売済フィルタ→元リスト の順で空回避。
+    const released = items.filter((it) => isReleased(it));
+    const filtered = released.filter((it) => !isCompilation(it.title));
+    const pool = filtered.length > 0 ? filtered : (released.length > 0 ? released : items);
     const products = mapItems(pool.slice(0, 10));
 
     res.status(200).json({
