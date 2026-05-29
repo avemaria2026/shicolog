@@ -857,13 +857,10 @@
       alert('今月はまだ記録がありません。＋1を押して記録してから試してね。');
       return;
     }
-    const sp = new URLSearchParams();
-    sp.set('monthly', '1');
-    sp.set('month', String(month));
-    sp.set('count', String(count));
-    if (topActress) sp.set('actress', topActress);
-    if (topGenre) sp.set('how', topGenre);
-    const shareUrl = `${APP_URL}share?${sp.toString()}`;
+    // シコログのホームURL（OGP固定画像つき）をシェア。
+    // /share 経由で動的画像を出そうとした時期もあったが X 側がカード化してくれなかったので
+    // 安全にホームの OGP カードを出す方針に統一。?ref=monthly で別URL扱いさせる。
+    const shareUrl = `${APP_URL}?ref=monthly`;
 
     const lines = [`📊 ${month}月の賢者度：${count}回`];
     if (topActress) lines.push(`主役：${topActress}`);
@@ -933,7 +930,10 @@
       actionText = '今日も賢者になりました';
     }
 
-    // リダイレクト先のFANZA URL を組み立てる
+    // FANZA URL を本文に直接埋め込む。
+    // 経緯：当初は /share ランディング経由でシコログ謹製のOG画像を出そうとしたが、
+    // X 側でカードが表示されないキャッシュ/判定問題があり、
+    // 「FANZA直URLでサムネカードが出る」昨日まで動いてた挙動に戻した。
     let fanzaUrl = null;
     if (work && work.url) {
       fanzaUrl = wrapFanzaAffiliate(work.url);
@@ -943,23 +943,10 @@
       fanzaUrl = makeFanzaSearchUrl(how);
     }
 
-    // シェア用URL：シコログ側 /share を経由させる。
-    // - X が OGP を取りに来た時、シコログ謹製のブランド画像がカードに乗る
-    // - 実ユーザーが踏んだ時は /share が即 FANZA URL にリダイレクトする
-    // - 作品/女優/ジャンルがすべて空の時はホームURLにフォールバック
-    let shareLandingUrl;
-    if (who || how || (work && work.title)) {
-      const sp = new URLSearchParams();
-      if (who) sp.set('actress', who);
-      if (work && work.title) sp.set('work', work.title);
-      if (how) sp.set('how', how);
-      if (fanzaUrl) sp.set('url', fanzaUrl);
-      shareLandingUrl = `${APP_URL}share?${sp.toString()}`;
-    } else {
-      shareLandingUrl = APP_URL;
-    }
-
-    const text = `${actionText}\n${shareLandingUrl}`;
+    const lines = [actionText];
+    if (fanzaUrl) lines.push(fanzaUrl);
+    lines.push(`— シコログ📓 ${APP_URL}`);
+    const text = lines.join('\n');
 
     // ハッシュタグ：シコログ + 女優名（あれば）
     const tags = ['シコログ'];
