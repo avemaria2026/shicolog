@@ -12,6 +12,8 @@
   const STORAGE_KEY = 'shicolog:records:v1';
   const THEME_KEY = 'shicolog:theme:v1';
   const FAVORITES_KEY = 'shicolog:favorites:v1';
+  const MONTHLY_GOAL_KEY = 'shicolog:monthly-goal:v1';
+  const DEFAULT_MONTHLY_GOAL = 30;
   // 旧バージョンで使っていたが現在は不要なlocalStorageキー（起動時にクリーンアップ）
   const LEGACY_KEYS = [
     'shicolog:pin:v1',
@@ -299,6 +301,37 @@
     if (meta) meta.setAttribute('content', isDark ? '#16181c' : '#3b6e8f');
   }
 
+  // ===== 月の目標値（賢者度メーター） =====
+  // 戻り値： null（メーター非表示）または 正の整数
+  // 初期状態（未保存）はDEFAULT_MONTHLY_GOAL（30）。明示的に空文字列を保存した時のみnull。
+  function loadMonthlyGoal() {
+    try {
+      const raw = localStorage.getItem(MONTHLY_GOAL_KEY);
+      if (raw === null) return DEFAULT_MONTHLY_GOAL;
+      if (raw === '') return null;
+      const n = parseInt(raw, 10);
+      if (Number.isNaN(n) || n <= 0) return DEFAULT_MONTHLY_GOAL;
+      return Math.min(n, 999);
+    } catch (_) {
+      return DEFAULT_MONTHLY_GOAL;
+    }
+  }
+
+  function saveMonthlyGoal(value) {
+    try {
+      if (value === null || value === '') {
+        localStorage.setItem(MONTHLY_GOAL_KEY, '');
+        return;
+      }
+      const n = Math.min(Math.max(1, parseInt(value, 10) || 0), 999);
+      if (n <= 0) {
+        localStorage.setItem(MONTHLY_GOAL_KEY, '');
+        return;
+      }
+      localStorage.setItem(MONTHLY_GOAL_KEY, String(n));
+    } catch (_) {}
+  }
+
 
   // ===== 集計 =====
   function countThisMonth(records) {
@@ -510,9 +543,57 @@
     const records = loadRecords();
     document.getElementById('home-monthly-count').textContent = String(countThisMonth(records));
     document.getElementById('home-today-count').textContent = String(countToday(records));
+    renderMonthlyGoal(records);
     renderHomeFavorites();
     renderPendingWhoHint();
     renderFanzaLinks();
+  }
+
+  // 賢者度メーター：今月の記録数と目標値を比較して進捗バー＋メッセージを更新
+  function renderMonthlyGoal(records) {
+    const root = document.getElementById('home-goal');
+    if (!root) return;
+    const goal = loadMonthlyGoal();
+    if (!goal) {
+      root.hidden = true;
+      return;
+    }
+    const count = countThisMonth(records || loadRecords());
+    root.hidden = false;
+
+    const currentEl = document.getElementById('home-goal-current');
+    const targetEl = document.getElementById('home-goal-target');
+    const fillEl = document.getElementById('home-goal-bar-fill');
+    const msgEl = document.getElementById('home-goal-message');
+
+    if (currentEl) currentEl.textContent = String(count);
+    if (targetEl) targetEl.textContent = String(goal);
+    if (fillEl) {
+      const pct = Math.min(100, Math.round((count / goal) * 100));
+      fillEl.style.width = pct + '%';
+      // 達成済み時はゲージの色を変える（CSS変数で）
+      fillEl.classList.toggle('home-goal__fill--full', count >= goal);
+    }
+    if (msgEl) msgEl.textContent = goalMessage(count, goal);
+  }
+
+  function goalMessage(count, goal) {
+    if (count >= goal) {
+      const over = count - goal;
+      if (over === 0) return '🎉 目標達成！今月も賢者を極めた';
+      if (over <= 3) return '🎉 目標突破！絶好調';
+      return `💪 目標を ${over} 回オーバー、極めし者`;
+    }
+    if (count === 0) return '今月のスタート、肩慣らし中';
+    // 月の経過率と現在の達成率を比較して、ペース感のあるメッセージを出す
+    const now = new Date();
+    const day = now.getDate();
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const expected = day / lastDay;
+    const ratio = count / goal;
+    if (ratio >= expected) return 'ペース順調！この調子';
+    if (ratio >= expected * 0.7) return 'もうちょっとペースアップしたいところ';
+    return '今月、まだまだ取り戻せる';
   }
 
   // ===== 悟りの書を探す（FANZAランダム1件） =====
@@ -997,6 +1078,7 @@
     if (tabName === 'stats') renderStats();
     if (tabName === 'settings') {
       refreshThemeSelector();
+      refreshMonthlyGoalInput();
     }
   }
 
@@ -1005,6 +1087,14 @@
     document.querySelectorAll('.theme-option').forEach((btn) => {
       btn.classList.toggle('is-selected', btn.dataset.theme === current);
     });
+  }
+
+  // 設定画面の「月の目標」inputに現在値を流し込む。null（メーター非表示）なら空欄
+  function refreshMonthlyGoalInput() {
+    const input = document.getElementById('input-monthly-goal');
+    if (!input) return;
+    const goal = loadMonthlyGoal();
+    input.value = goal ? String(goal) : '';
   }
 
   function renderStats() {
@@ -2093,6 +2183,15 @@
         refreshThemeSelector();
       });
     });
+
+    // 月の目標値：入力中に保存（IME中の重複保存は気にせず最終値だけ反映される）
+    const goalInput = document.getElementById('input-monthly-goal');
+    if (goalInput) {
+      goalInput.addEventListener('input', () => {
+        saveMonthlyGoal(goalInput.value);
+        renderMonthlyGoal();
+      });
+    }
 
     // OSのテーマ変更を 'system' 設定時に追従
     if (window.matchMedia) {

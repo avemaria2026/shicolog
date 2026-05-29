@@ -58,6 +58,20 @@
             <span class="home-stat__unit">回</span>
           </div>
         </div>
+
+        <!-- 賢者度メーター（今月の進捗バー） -->
+        <div id="home-goal" class="home-goal" hidden>
+          <div class="home-goal__header">
+            <span class="home-goal__label">今月の賢者度</span>
+            <span class="home-goal__count">
+              <span id="home-goal-current">0</span> / <span id="home-goal-target">30</span>
+            </span>
+          </div>
+          <div class="home-goal__bar">
+            <div id="home-goal-bar-fill" class="home-goal__fill" style="width: 0%"></div>
+          </div>
+          <p id="home-goal-message" class="home-goal__message"></p>
+        </div>
       </div>
 
       <!-- 悟りの書を探す（FANZAランダム1件、🎲で再抽選） -->
@@ -237,6 +251,16 @@
           <span class="settings-item__hint">別端末のJSONを取り込む</span>
         </button>
         <input id="file-import-json" type="file" accept="application/json,.json" hidden>
+      </div>
+
+      <div class="settings-group">
+        <h2 class="settings-group__title">月の目標</h2>
+        <div class="settings-goal">
+          <label class="settings-goal__label" for="input-monthly-goal">回数</label>
+          <input id="input-monthly-goal" class="settings-goal__input" type="number" min="1" max="999" step="1" inputmode="numeric">
+          <span class="settings-goal__unit">回 / 月</span>
+        </div>
+        <p class="settings-note">ホームの賢者度メーターの目標値。空にすればメーターは非表示。</p>
       </div>
 
       <div class="settings-group">
