@@ -59,10 +59,13 @@
           </div>
         </div>
 
-        <!-- 賢者度メーター（今月の進捗バー） -->
+        <!-- 賢者度メーター（今月の進捗バー＋称号） -->
         <div id="home-goal" class="home-goal" hidden>
           <div class="home-goal__header">
-            <span class="home-goal__label">今月の賢者度</span>
+            <span class="home-goal__rank">
+              <span id="home-goal-rank-icon" class="home-goal__rank-icon" aria-hidden="true">🌱</span>
+              <span id="home-goal-rank-label" class="home-goal__rank-label">駆け出し賢者</span>
+            </span>
             <span class="home-goal__count">
               <span id="home-goal-current">0</span> / <span id="home-goal-target">30</span>
             </span>

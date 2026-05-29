@@ -222,24 +222,43 @@ input {
 }
 .home-goal__header {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   margin-bottom: 8px;
   gap: 8px;
 }
-.home-goal__label {
-  font-size: 13px;
-  color: var(--text-sub);
-  font-weight: 600;
+.home-goal__rank {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--accent);
+}
+.home-goal__rank-icon {
+  font-size: 18px;
+  line-height: 1;
+}
+.home-goal--final .home-goal__rank {
+  /* 大賢者：金色 */
+  color: #b8821a;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .home-goal--final .home-goal__rank {
+    color: #e0a83a;
+  }
+}
+[data-theme="dark"] .home-goal--final .home-goal__rank {
+  color: #e0a83a;
 }
 .home-goal__count {
   font-size: 14px;
-  color: var(--text);
+  color: var(--text-sub);
 }
 .home-goal__count #home-goal-current {
   font-size: 20px;
   font-weight: 700;
-  color: var(--accent);
+  color: var(--text);
 }
 .home-goal__bar {
   width: 100%;

@@ -549,7 +549,7 @@
     renderFanzaLinks();
   }
 
-  // 賢者度メーター：今月の記録数と目標値を比較して進捗バー＋メッセージを更新
+  // 賢者度メーター：今月の記録数と目標値を比較して進捗バー＋称号＋メッセージを更新
   function renderMonthlyGoal(records) {
     const root = document.getElementById('home-goal');
     if (!root) return;
@@ -565,16 +565,31 @@
     const targetEl = document.getElementById('home-goal-target');
     const fillEl = document.getElementById('home-goal-bar-fill');
     const msgEl = document.getElementById('home-goal-message');
+    const rankIconEl = document.getElementById('home-goal-rank-icon');
+    const rankLabelEl = document.getElementById('home-goal-rank-label');
 
     if (currentEl) currentEl.textContent = String(count);
     if (targetEl) targetEl.textContent = String(goal);
     if (fillEl) {
       const pct = Math.min(100, Math.round((count / goal) * 100));
       fillEl.style.width = pct + '%';
-      // 達成済み時はゲージの色を変える（CSS変数で）
-      fillEl.classList.toggle('home-goal__fill--full', count >= goal);
+      fillEl.classList.toggle('home-goal__fill--full', count >= 30);
     }
+    const rank = rankForCount(count);
+    if (rankIconEl) rankIconEl.textContent = rank.icon;
+    if (rankLabelEl) rankLabelEl.textContent = rank.label;
+    root.classList.toggle('home-goal--final', rank.isFinal);
     if (msgEl) msgEl.textContent = goalMessage(count, goal);
+  }
+
+  // 称号：6回刻み6段階。30+ は「大賢者」がトップ
+  function rankForCount(count) {
+    if (count >= 30) return { label: '大賢者',     icon: '🏆', isFinal: true };
+    if (count >= 24) return { label: '極めし賢者', icon: '✨', isFinal: false };
+    if (count >= 18) return { label: '達人賢者',   icon: '🔥', isFinal: false };
+    if (count >= 12) return { label: '一人前賢者', icon: '💫', isFinal: false };
+    if (count >= 6)  return { label: '見習い賢者', icon: '📖', isFinal: false };
+    return                  { label: '駆け出し賢者', icon: '🌱', isFinal: false };
   }
 
   function goalMessage(count, goal) {
