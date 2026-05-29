@@ -1764,16 +1764,177 @@
     });
   }
 
-  // ===== ServiceWorker登録 =====
+  // ===== ServiceWorker登録（自動更新つき） =====
+  // 流れ：
+  //   1. 起動時にSW登録（既存と同じ）
+  //   2. 1時間ごと＆タブが可視化された時に reg.update() で新バージョンチェック
+  //   3. 新SWがactivate（controllerchange）したら更新バナー出現
+  //   4. ユーザーが「適用」タップ→reload で新版適用
+  //
+  // 初回登録時にも controllerchange が発火するので、すでに controller があったか
+  // どうかで判定して新規登録のときはバナー出さない。
   function registerServiceWorker() {
     if (!('serviceWorker' in navigator)) return;
-    // file:// では動かないので http/https のみ
     if (location.protocol !== 'http:' && location.protocol !== 'https:') return;
+
+    let hadController = !!navigator.serviceWorker.controller;
+    let reloading = false;
+
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (reloading) return;
+      if (!hadController) {
+        hadController = true;
+        return; // 初回登録時の発火はスルー
+      }
+      showUpdateBanner(() => {
+        reloading = true;
+        window.location.reload();
+      });
+    });
+
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./sw.js').catch(() => {
+      navigator.serviceWorker.register('./sw.js').then((reg) => {
+        // 1時間ごとに更新チェック
+        setInterval(() => {
+          reg.update().catch(() => {});
+        }, 60 * 60 * 1000);
+        // タブが可視化された時にもチェック（長時間放置→復帰時の即時更新）
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'visible') {
+            reg.update().catch(() => {});
+          }
+        });
+      }).catch(() => {
         // 失敗してもアプリは動く
       });
     });
+  }
+
+  function showUpdateBanner(onApply) {
+    if (document.getElementById('update-banner')) return;
+    const banner = document.createElement('div');
+    banner.id = 'update-banner';
+    banner.className = 'update-banner';
+    banner.setAttribute('role', 'status');
+    banner.innerHTML =
+      '<span class="update-banner__text">✨ 新しいバージョンが用意できました</span>' +
+      '<button class="update-banner__apply" type="button">今すぐ更新</button>' +
+      '<button class="update-banner__dismiss" type="button" aria-label="閉じる">×</button>';
+    banner.querySelector('.update-banner__apply').addEventListener('click', onApply);
+    banner.querySelector('.update-banner__dismiss').addEventListener('click', () => {
+      banner.remove();
+    });
+    document.body.appendChild(banner);
+  }
+
+  // ===== ホーム画面追加プロンプト =====
+  // - Android/PC Chrome：beforeinstallpromptをキャッチして「追加」ボタン付きバナー
+  // - iOS Safari：beforeinstallpromptが発火しないので手順テキストを案内
+  // - 既にスタンドアロン起動（PWAとして開かれている）なら何もしない
+  // - localStorageで「最後に表示した日時」を保存し、7日空けてから再表示
+  const INSTALL_LAST_KEY = 'shicolog/install-prompt-last';
+  const INSTALL_REPROMPT_MS = 7 * 24 * 60 * 60 * 1000; // 7日
+
+  function isStandalone() {
+    if (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) return true;
+    if (window.navigator.standalone === true) return true; // iOS Safari
+    return false;
+  }
+
+  function shouldShowInstallPrompt() {
+    if (isStandalone()) return false;
+    try {
+      const last = parseInt(localStorage.getItem(INSTALL_LAST_KEY) || '0', 10);
+      if (last && Date.now() - last < INSTALL_REPROMPT_MS) return false;
+    } catch (_) {
+      // localStorage が使えない環境では出さない
+      return false;
+    }
+    return true;
+  }
+
+  function markInstallShown() {
+    try { localStorage.setItem(INSTALL_LAST_KEY, String(Date.now())); } catch (_) {}
+  }
+
+  function setupInstallPrompt() {
+    if (!shouldShowInstallPrompt()) return;
+
+    const ua = navigator.userAgent || '';
+    const isIOS = /iPad|iPhone|iPod/.test(ua) && !window.MSStream;
+
+    if (isIOS) {
+      // iOS Safari は beforeinstallprompt が来ない。8秒後に手順案内
+      setTimeout(() => {
+        if (!shouldShowInstallPrompt()) return;
+        showIOSInstallHint();
+      }, 8000);
+      return;
+    }
+
+    // Android/PC Chrome
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      const deferred = e;
+      // 少し待ってから（ユーザーが画面操作を始めてから）表示
+      setTimeout(() => {
+        if (!shouldShowInstallPrompt()) return;
+        showAndroidInstallBanner(deferred);
+      }, 8000);
+    });
+  }
+
+  function showAndroidInstallBanner(deferred) {
+    if (document.getElementById('install-banner')) return;
+    const banner = document.createElement('div');
+    banner.id = 'install-banner';
+    banner.className = 'install-banner';
+    banner.innerHTML =
+      '<div class="install-banner__icon" aria-hidden="true">📲</div>' +
+      '<div class="install-banner__body">' +
+        '<div class="install-banner__title">アプリとして追加</div>' +
+        '<div class="install-banner__hint">ホーム画面に置くとサッと開けます</div>' +
+      '</div>' +
+      '<button class="install-banner__add" type="button">追加</button>' +
+      '<button class="install-banner__dismiss" type="button" aria-label="閉じる">×</button>';
+
+    banner.querySelector('.install-banner__add').addEventListener('click', async () => {
+      try {
+        await deferred.prompt();
+        await deferred.userChoice;
+      } catch (_) {}
+      banner.remove();
+      markInstallShown();
+    });
+    banner.querySelector('.install-banner__dismiss').addEventListener('click', () => {
+      banner.remove();
+      markInstallShown();
+    });
+
+    document.body.appendChild(banner);
+    markInstallShown();
+  }
+
+  function showIOSInstallHint() {
+    if (document.getElementById('install-banner')) return;
+    const banner = document.createElement('div');
+    banner.id = 'install-banner';
+    banner.className = 'install-banner install-banner--ios';
+    banner.innerHTML =
+      '<div class="install-banner__icon" aria-hidden="true">📲</div>' +
+      '<div class="install-banner__body">' +
+        '<div class="install-banner__title">ホーム画面に追加</div>' +
+        '<div class="install-banner__hint">画面下の <span class="install-banner__share" aria-label="共有ボタン">⬆</span>「共有」→「ホーム画面に追加」</div>' +
+      '</div>' +
+      '<button class="install-banner__dismiss" type="button" aria-label="閉じる">×</button>';
+
+    banner.querySelector('.install-banner__dismiss').addEventListener('click', () => {
+      banner.remove();
+      markInstallShown();
+    });
+
+    document.body.appendChild(banner);
+    markInstallShown();
   }
 
   // +1ボタン：短押し／長押しの切り分け
@@ -2089,6 +2250,7 @@
     bindOracle();
     setupVisibilityHandler();
     registerServiceWorker();
+    setupInstallPrompt();
 
     renderHome();
     loadOracle();

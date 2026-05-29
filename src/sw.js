@@ -4,7 +4,7 @@
  * - データの送信は一切しない（同期・分析・外部API禁止）
  */
 
-const CACHE_VERSION = 'shicolog-v29-revert-fanza-direct';
+const CACHE_VERSION = 'shicolog-v30-auto-update';
 const CACHE_NAME = `shicolog-${CACHE_VERSION}`;
 const PRECACHE = [
   './',

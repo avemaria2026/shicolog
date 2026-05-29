@@ -1574,3 +1574,136 @@ input {
   border: 1px dashed var(--border);
   border-radius: 8px;
 }
+
+/* ===== 更新バナー（SW新版検知時） ===== */
+.update-banner {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(var(--tabbar-h) + var(--safe-bottom) + 12px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: calc(100% - 24px);
+  padding: 10px 12px;
+  background: var(--accent);
+  color: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  font-size: 14px;
+  animation: bannerSlideUp 0.25s ease-out;
+}
+.update-banner__text {
+  flex: 1;
+  min-width: 0;
+}
+.update-banner__apply {
+  flex-shrink: 0;
+  padding: 6px 14px;
+  background: #fff;
+  color: var(--accent);
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+}
+.update-banner__apply:active {
+  transform: scale(0.97);
+}
+.update-banner__dismiss {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.85;
+  padding: 0;
+}
+
+/* ===== ホーム画面追加バナー ===== */
+.install-banner {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: calc(var(--tabbar-h) + var(--safe-bottom) + 12px);
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  font-size: 14px;
+  animation: bannerSlideUp 0.25s ease-out;
+}
+.install-banner__icon {
+  flex-shrink: 0;
+  font-size: 28px;
+  line-height: 1;
+}
+.install-banner__body {
+  flex: 1;
+  min-width: 0;
+}
+.install-banner__title {
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+.install-banner__hint {
+  font-size: 12px;
+  color: var(--text-sub);
+}
+.install-banner__share {
+  display: inline-block;
+  padding: 0 4px;
+  border-radius: 4px;
+  background: var(--surface-alt);
+}
+.install-banner__add {
+  flex-shrink: 0;
+  padding: 8px 16px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+}
+.install-banner__add:active {
+  transform: scale(0.97);
+}
+.install-banner__dismiss {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  background: transparent;
+  border: none;
+  color: var(--text-sub);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+
+@keyframes bannerSlideUp {
+  from { opacity: 0; transform: translate(-50%, 12px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
+}
+/* install-bannerはtranslate使ってないので別アニメ */
+.install-banner {
+  animation: installBannerSlideUp 0.25s ease-out;
+}
+@keyframes installBannerSlideUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
