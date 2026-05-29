@@ -131,13 +131,22 @@ export default async function handler(req: Request) {
     children,
   );
 
-  return new ImageResponse(tree, {
+  // ImageResponse はデフォルトでチャンク転送（Content-Length無し）。
+  // 一部のクローラ（X含む可能性）が chunked を嫌うため、一度 ArrayBuffer に
+  // 溜めてから Content-Length 明示で返す。サイズが軽い（〜40KB）ので問題なし。
+  const imgRes = new ImageResponse(tree, {
     width: 1200,
     height: 630,
     fonts: [{ name: 'NotoSansJP', data: boldData, style: 'normal', weight: 700 }],
     emoji: 'twemoji',
+  });
+  const buf = await imgRes.arrayBuffer();
+  return new Response(buf, {
+    status: 200,
     headers: {
-      'cache-control': 'public, max-age=3600, s-maxage=86400',
+      'Content-Type': 'image/png',
+      'Content-Length': String(buf.byteLength),
+      'Cache-Control': 'public, max-age=3600, s-maxage=86400',
     },
   });
 }
