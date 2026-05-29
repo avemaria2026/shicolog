@@ -81,8 +81,11 @@ module.exports = async (req, res) => {
     const actress =
       (pick.iteminfo && pick.iteminfo.actress && pick.iteminfo.actress[0] && pick.iteminfo.actress[0].name) || '';
 
-    // OG画像：当面は静的なシコログOGP画像を使う（/api/ogが不安定なため）
-    const ogImageUrl = `${APP_ORIGIN}/ogp.png`;
+    // OG画像：シコログ謹製の動的画像。oracle/today では作品名と女優名を焼き込む
+    const ogParams = new URLSearchParams();
+    if (title) ogParams.set('work', title);
+    if (actress) ogParams.set('actress', actress);
+    const ogImageUrl = `${APP_ORIGIN}/api/og?${ogParams.toString()}`;
 
     const pageTitle = `📜 今日の悟りの書（${ymd}）`;
     const desc = `今日の啓示：『${title}』。シコログが毎日選ぶFANZA作品。あなたはどこまで賢者になれるのか？`;
