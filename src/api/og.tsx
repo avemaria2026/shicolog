@@ -4,8 +4,10 @@ import { ImageResponse } from '@vercel/og';
 
 export const config = { runtime: 'edge' };
 
+// satoriは WOFF2 を直接読めないため、OTF形式の Noto Sans JP を使う。
+// notofonts/noto-cjk リポジトリから jsdelivr 経由で取得（Google Fonts CDN は規約上避ける）。
 const FONT_BOLD_URL =
-  'https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-jp@latest/files/noto-sans-jp-japanese-700-normal.woff2';
+  'https://cdn.jsdelivr.net/gh/notofonts/noto-cjk@main/Sans/SubsetOTF/JP/NotoSansJP-Bold.otf';
 
 export default async function handler(req: Request) {
   const url = new URL(req.url);
