@@ -110,7 +110,6 @@ module.exports = (req, res) => {
 <meta name="twitter:description" content="${escapeHtml(description)}">
 <meta name="twitter:image" content="${escapeHtml(ogImageUrl)}">
 
-<meta http-equiv="refresh" content="0;url=${escapeHtml(redirectUrl)}">
 <link rel="canonical" href="${APP_ORIGIN}/">
 <style>
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', sans-serif;
@@ -124,7 +123,8 @@ a { color: #3b6e8f; word-break: break-all; }
 <p>FANZAに移動しています…</p>
 <p>自動で移動しない場合は <a href="${escapeHtml(redirectUrl)}">こちら</a> をタップ</p>
 <script>
-// Bot対策で meta refresh は残しつつ、実ユーザーには即時遷移させる
+// 実ユーザーには即時遷移。X等のbotはJSを実行しないのでOGPだけ拾ってくれる。
+// （meta refresh を入れるとbotが「リダイレクトページ」とみなしカードを作らないので使わない）
 location.replace(${JSON.stringify(redirectUrl)});
 </script>
 </body>
